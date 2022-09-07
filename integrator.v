@@ -28,7 +28,7 @@ module integrator (
 	input wire clk,
 	input wire clr,
 	input wire signed [n-1:0] in,
-	output reg signed [m-1:0] out
+	output reg signed [m-1:0] out = 0
 );
 
 parameter n = 16;
