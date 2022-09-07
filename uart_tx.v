@@ -1,8 +1,9 @@
 // Buffered UART Transmitter
 // by Tomek Szczęsny 2022
 //
+// Sends data in 8n1 format, at any clock rate.
+//
 // Uses iCE40 4kb RAM block as 512B circular buffer.
-// Sends data in 8n1 format, at any input clock rate.
 //
 // TODO: Buffer overflow corrupts data with stuff of unclear origin.
 // Just don't overflow the buffer and you'll be fine. It's 512B after all.
@@ -16,18 +17,22 @@
 // data[8] ===>|                  |
 //             +------------------+
 //
-// "clk" is a clock input for transmitter operation. Typically 9600 Hz or 115200 Hz.
-// "data[8]" is stored in output buffer on each "write" posedge.
-// "out" is UART data output, typically wired to a physical pin.
-// "busy" is high if buffer is full and new data is being discarded.
+// Parameters: none
+//
+// Ports:
+// clk		- a transmitter clock input. Typically 9.6 or 115.2 kHz.
+// write	- input buffer control, stores data at posedge.
+// data[8] 	- 1-byte wide input fetched at each "write" posedge.
+// out		- UART data output, typically wired to a physical pin.
+// busy		- Buffer full indicator.
 //
 
 module uart_tx(
-	input wire clk,		// Clock input (clocks output)
-	input wire write,	// Posedge writes data to a buffer
-	input wire[7:0] data,	// 8-bit data input
-	output reg out,	        // Output that should go to physical output pin
-	output wire busy	// The buffer is full, new data will be discarded
+	input wire clk,
+	input wire write,
+	input wire[7:0] data,
+	output reg out,
+	output wire busy
 );
 initial out <= 1;
 

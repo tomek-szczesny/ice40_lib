@@ -17,11 +17,11 @@
 // n - bit size of input wire (16)
 // m - bit size of output reg, must be greater or equal to "n" (17)
 //
-// Signals:
-// clk - input clock. Each posedge fetches "in" and updates "out".
-// clr - asynchronously resets "out" register to zero.
-// in[n] - input data
-// out[n+m] - output data
+// Ports:
+// clk		- input clock. Each posedge fetches "in" and updates "out".
+// clr		- asynchronously resets "out" register to zero.
+// in[n]	- input data
+// out[m]	- output data
 
 module integrator (
 	input wire clk,
