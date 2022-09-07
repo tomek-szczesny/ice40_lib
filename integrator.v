@@ -3,8 +3,9 @@
 //
 //
 // Digital integrator adds each "in" value to "out" register on "clk" posedge.
-// This integrator works with signed integers.
-// The overflow behavior is currently unspecified.
+// This integrator works with signed integers. Output register may be wider
+// than input register.
+// The output register wraps on overflow (see testbench).
 //
 //                +------------------+
 //        clk --->|                  |
@@ -41,6 +42,11 @@ begin
 	end else begin
 		out <= out + in;
 	end
+end
+
+always @ (posedge clr)
+begin
+	out <= 0;
 end
 
 endmodule
