@@ -4,13 +4,14 @@
 // Transforms signed integers into a bit stream.
 // 
 //
-//             +------------------------------+
-//     clk --->|                              |
-//     clr --->|                              |
-//             |      dsmod1    +----------+  |---> out
-//             |                |integrator|  |
-//   in[n] ===>|                +----------+  |
-//             +------------------------------+
+//             +-------------------------------+
+//     clk --->|               +----------+    |
+//     clr --->|               |integrator|    |---> out
+//             |     dsmod1    +----------+    |
+//             |               +-----+         |
+//   in[n] ===>|               | ddc |         |
+//             |               +-----+         |
+//             +-------------------------------+
 //
 // Parameters:
 // n	- Bit width of input data (16)
@@ -22,6 +23,7 @@
 // out		- an output bit stream.
 //
 `include "integrator.v"
+`include "ddc1.v"
 
 module dsmod1(
 	input wire clk,
@@ -30,20 +32,16 @@ module dsmod1(
 	output wire out);
 parameter n = 16;
 
+wire signed [n-1:0] ddc1;
 wire signed [n:0] i1_in;	// Integrator input
+assign i1_in = in - ddc1;
 wire signed [n+1:0] i1_out;	// Integrator output
 assign out = i1_out[n+1];
-assign i1_in = in - ddc;
 
-// DDC
-wire signed [n-1:0] ddc;
-genvar i;
-generate
-	for (i=0; i<n-1; i=i+1) begin
-		assign ddc[i] = out;
-	end
-	assign ddc[n-1] = ~out;
-endgenerate
+ddc1 #(
+	.n(n)) ddc11 (
+	.in(out),
+	.out(ddc1));
 
 integrator #(
 	.n(n+1),

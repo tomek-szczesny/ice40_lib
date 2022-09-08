@@ -23,6 +23,8 @@
 // clr		- asynchronously resets "out" register to zero.
 // in[n]	- input data
 // out[m]	- output data
+`ifndef _integrator_v_
+`define _integrator_v_
 
 module integrator (
 	input wire clk,
@@ -51,3 +53,4 @@ end
 
 endmodule
 
+`endif
