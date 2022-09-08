@@ -26,6 +26,8 @@
 // out		- UART data output, typically wired to a physical pin.
 // busy		- Buffer full indicator.
 //
+`ifndef _uart_tx_v_
+`define _uart_tx_v_
 
 module uart_tx(
 	input wire clk,
@@ -88,3 +90,5 @@ begin
 end
 
 endmodule
+
+`endif

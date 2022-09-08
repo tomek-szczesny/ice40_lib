@@ -19,6 +19,9 @@
 // in	- Input
 // out	- Output
 //
+`ifndef _clkdiv_v_
+`define _clkdiv_v_
+
 module clkdiv(
 	input wire in,
 	output reg out = 0
@@ -38,3 +41,5 @@ begin
 end
 
 endmodule
+
+`endif

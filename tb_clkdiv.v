@@ -1,4 +1,4 @@
-`include "clock_divider.v"
+`include "clkdiv.v"
 
 module top(
 );

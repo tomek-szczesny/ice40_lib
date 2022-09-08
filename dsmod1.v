@@ -22,6 +22,9 @@
 // in[n]	- Input data, signed integers.
 // out		- an output bit stream.
 //
+`ifndef _dsmod1_v_
+`define _dsmod1_v_
+
 `include "integrator.v"
 `include "ddc1.v"
 
@@ -52,3 +55,5 @@ integrator #(
 	.out(i1_out));
 
 endmodule
+
+`endif

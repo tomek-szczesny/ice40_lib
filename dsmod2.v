@@ -23,6 +23,9 @@
 // in[n]	- Input data, signed integers.
 // out		- an output bit stream.
 //
+`ifndef _dsmod2_v_
+`define _dsmod2_v_
+
 `include "integrator.v"
 
 module dsmod2(
@@ -69,3 +72,5 @@ integrator #(
 	.in(i2_in),
 	.out(i2_out));
 endmodule
+
+`endif

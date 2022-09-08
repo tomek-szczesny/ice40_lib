@@ -23,6 +23,8 @@
 // sd	- I2S Serial Data
 // l[b]	- Left channel PCM output
 // r[b] - Right channel PCM output
+`ifndef _i2s_rx_v_
+`define _i2s_rx_v_
 
 module i2s_rx(
 	input wire sck,
@@ -69,3 +71,5 @@ end
 // unexepectedly.
 
 endmodule
+
+`endif
