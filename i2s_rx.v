@@ -2,20 +2,21 @@
 // by Tomek Szczęsny 2022
 //
 // Warning: This design has not been tested yet.
+// TODO: testbench
 //
 // Typically connected to external pins, it receives I2S signals and 
 // has buffered output L and R channel PCM frames.
 //
 //             +------------------+
-//     sck --->|                  |
-//             |                  |===> l[b]
-//      ws --->|      i2s_rx      |
-//             |                  |===> r[b]
-//      sd --->|                  |
+//     sck --->|                  |===> l[b]
+//             |                  |
+//      ws --->|      i2s_rx      |===> r[b]
+//             |                  |
+//      sd --->|                  |---> ock
 //             +------------------+
 //
 // Parameters:
-// b	- Output PCM bit depth (16)
+// b	- Output PCM bit depth (b < 64) (16)
 //
 // Ports:
 // sck	- I2S Continuous Serial Clock
@@ -23,6 +24,7 @@
 // sd	- I2S Serial Data
 // l[b]	- Left channel PCM output
 // r[b] - Right channel PCM output
+// ock	- Output clk. Posedge and negedge on r[b] and l[b] update, respectively.
 `ifndef _i2s_rx_v_
 `define _i2s_rx_v_
 
@@ -31,13 +33,14 @@ module i2s_rx(
 	input wire ws,
 	input wire sd,
 	output reg [b-1:0] l = 0,
-	output reg [b-1:0] r = 0
+	output reg [b-1:0] r = 0,
+	output reg ock = 0
 );
 parameter b = 16;
 
 reg [b-1:0] rxbuf = 0;		// Receiver buffer
 reg ch = 0;			// Last WS state
-reg [4:0] cnt = 0;		// Bit counter for current word
+reg [5:0] cnt = 0;		// Bit counter for current word
 reg dump = 0;			// Schedule output dump on next sck cycle
 
 
@@ -49,6 +52,10 @@ begin
 		rxbuf[b-1-cnt] <= sd;
 	end
 
+	if (cnt == 0) begin
+		rxbuf[b-2:0] <= 0;
+	end
+
 	if (ch != ws) begin
 		dump <= 1;
 		cnt <= 0;
@@ -58,17 +65,15 @@ begin
 		if (dump == 1) begin
 			if (ws == 0) begin
 				l <= rxbuf;
+				ock <= 0;
 			end else begin
 				r <= rxbuf;
+				ock <= 1;
 			end
 		end
 	end
 
 end
-
-// Note: rxbuf is never cleared, just overwritten. It may render some
-// negligible side effects if input stream bit depth gets reduced
-// unexepectedly.
 
 endmodule
 
