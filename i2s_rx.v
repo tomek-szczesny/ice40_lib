@@ -1,11 +1,12 @@
 // I2S Receiver
 // by Tomek Szczęsny 2022
 //
-// Warning: This design has not been tested yet.
-// TODO: testbench
-//
 // Typically connected to external pins, it receives I2S signals and 
 // has buffered output L and R channel PCM frames.
+//
+// As per I2S standard, this receiver is compatible with any bit depth of the
+// sender, by either ignoring excessive LSBs or concatenating missing LSB
+// zeroes.
 //
 //             +------------------+
 //     sck --->|                  |===> l[b]
@@ -25,6 +26,7 @@
 // l[b]	- Left channel PCM output
 // r[b] - Right channel PCM output
 // ock	- Output clk. Posedge and negedge on r[b] and l[b] update, respectively.
+//
 `ifndef _i2s_rx_v_
 `define _i2s_rx_v_
 
@@ -64,11 +66,11 @@ begin
 		dump <= 0;
 		if (dump == 1) begin
 			if (ws == 0) begin
-				l <= rxbuf;
-				ock <= 0;
-			end else begin
 				r <= rxbuf;
 				ock <= 1;
+			end else begin
+				l <= rxbuf;
+				ock <= 0;
 			end
 		end
 	end
