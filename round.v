@@ -2,7 +2,9 @@
 // Integer round
 // by Tomek Szczesny 2022
 //
-//TODO: Solve the mystery of line #52 (assign out).
+// TODO: Solve the mystery of line #55 (assign out).
+// Yosys explicitly states this will not work - leaving it for now until
+// a hardware test is possible.
 //
 // This module rounds signed integers into the given bit precision.
 // The output may have lower width than input, which effectively divides the
@@ -36,12 +38,13 @@ module round(
 	output wire signed [m-1:0] out,
 	output wire signed [n-1:0] err
 );
+integer mag = $pow(2, n-p-2);
 parameter n = 8;
 parameter m = 8;
 parameter p = 2;
 
 wire signed [n-1:0] rnd;	// input with added round-floor magic number
-assign rnd[n-1:0] = in[n-1:0] + $pow(2, n-p-2);
+assign rnd[n-1:0] = in[n-1:0] + mag;
 wire signed [n-1:0] rnd2;	// rnd with zeroed out LSBs
 
 // Overflow may happen - but only over the top
