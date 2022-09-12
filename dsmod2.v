@@ -26,6 +26,7 @@
 `ifndef _dsmod2_v_
 `define _dsmod2_v_
 
+`include "ddc1.v"
 `include "integrator.v"
 
 module dsmod2(
