@@ -1,7 +1,6 @@
 // Generic integrator
 // by Tomek Szczęsny 2022
 //
-//
 // Digital integrator adds each "in" value to "out" register on "clk" posedge.
 // This integrator works with signed integers. Output register may be wider
 // than input register.
@@ -9,8 +8,7 @@
 //
 //                +------------------+
 //        clk --->|                  |
-//        clr --->|                  |
-//                |    integrator    |
+//        clr --->|    integrator    |
 //      in[n] ===>|                  |===> out[m]
 //                +------------------+
 //
@@ -23,6 +21,11 @@
 // clr		- asynchronously resets "out" register to zero.
 // in[n]	- input data
 // out[m]	- output data
+//
+// Resources:
+// m x SB_LUT
+// m x SB_DFFR
+
 `ifndef _integrator_v_
 `define _integrator_v_
 
@@ -36,7 +39,7 @@ module integrator (
 parameter n = 16;
 parameter m = 17;
 
-always @ (posedge clk)
+always @ (posedge clk, posedge clr)
 begin
 	if (clr == 1)
 	begin
@@ -44,11 +47,6 @@ begin
 	end else begin
 		out <= out + in;
 	end
-end
-
-always @ (posedge clr)
-begin
-	out <= 0;
 end
 
 endmodule
