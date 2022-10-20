@@ -31,11 +31,11 @@
 // data_o[n]	- An output exposing the oldest data stored in FIFO
 // status[3]	- Buffer status output:
 // 			000 - Buffer empty
-// 			001 - less that 25% full
-// 			010 - less than 50% full
-// 			011 - less than 75% full
-// 			100 - less than 100% full
-// 			101 - completely full
+// 			001 - <= 25% full
+// 			010 - <= 50% full
+// 			011 - <= 75% full
+// 			100 - < 100% full
+// 			101 -   100% full
 
 `ifndef _fifo_v_
 `define _fifo_v_
@@ -52,7 +52,7 @@ parameter m = 512;
 
 initial data_o <= 0;
 
-// buf_t points at a next free cell
+// buf_t points at the next free cell
 // buf_b points at the oldest data cell
 // Both have one bit wider versions so buf_lvl actually can count up to "m".
 
@@ -71,17 +71,17 @@ reg [n-1:0] fifo_buf [0:m-1];
 always@(buf_lvl)
 begin
 	if      (buf_lvl == 0) status <= 0;
-	else if (buf_lvl <   m/4) status <= 3'b001;
-	else if (buf_lvl < 2*m/4) status <= 3'b010;
-	else if (buf_lvl < 3*m/4) status <= 3'b011;
-	else if (buf_lvl <   m  ) status <= 3'b100;
-	else status = 3'b101;	
+	else if (buf_lvl <=   m/4) status <= 3'b001;
+	else if (buf_lvl <= 2*m/4) status <= 3'b010;
+	else if (buf_lvl <= 3*m/4) status <= 3'b011;
+	else if (buf_lvl <    m  ) status <= 3'b100;
+	else status <= 3'b101;	
 end
 
 // Data input
 always @(posedge clk)
 begin
-	if(buf_lvl < m-1) begin
+	if(buf_lvl < m) begin
 		fifo_buf[buf_t] <= data;
 		buf_top <= buf_top + 1;
 	end
