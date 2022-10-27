@@ -15,7 +15,7 @@
 //             |                  |              
 // data[n] ===>|       fifo       |===> data_o[n]
 //             |                  |
-//             |                  |===> status[3]
+//             |                  |===> status[4]
 //             +------------------+
 //                             
 //
@@ -29,13 +29,13 @@
 // data[n] 	- Data input fetched at each "clk" posedge.
 // clk_o	- Discards the oldest data on posedge (thus updates "data_o")
 // data_o[n]	- An output exposing the oldest data stored in FIFO
-// status[3]	- Buffer status output:
-// 			000 - Buffer empty
-// 			001 - <= 25% full
-// 			010 - <= 50% full
-// 			011 - <= 75% full
-// 			100 - < 100% full
-// 			101 -   100% full
+// status[4]	- Buffer status output:
+// 			0000 - Buffer empty
+// 			0001 - <= 25% full
+// 			0011 - <= 50% full
+// 			0101 - <= 75% full
+// 			0111 - < 100% full
+// 			1111 -   100% full
 
 `ifndef _fifo_v_
 `define _fifo_v_
@@ -70,12 +70,12 @@ reg [n-1:0] fifo_buf [0:m-1];
 // Status output
 always@(buf_lvl)
 begin
-	if      (buf_lvl == 0) status <= 0;
-	else if (buf_lvl <=   m/4) status <= 3'b001;
-	else if (buf_lvl <= 2*m/4) status <= 3'b010;
-	else if (buf_lvl <= 3*m/4) status <= 3'b011;
-	else if (buf_lvl <    m  ) status <= 3'b100;
-	else status <= 3'b101;	
+	if      (buf_lvl == 0)     status <= 4'b0000;
+	else if (buf_lvl <=   m/4) status <= 4'b0001;
+	else if (buf_lvl <= 2*m/4) status <= 4'b0011;
+	else if (buf_lvl <= 3*m/4) status <= 4'b0101;
+	else if (buf_lvl <    m  ) status <= 4'b0111;
+	else                       status <= 4'b1111;	
 end
 
 // Data input
