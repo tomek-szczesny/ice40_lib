@@ -45,7 +45,7 @@ module fifo(
 	input wire clk_o,
 	input wire[n-1:0] data,
 	output reg[n-1:0] data_o,
-	output reg[2:0] status
+	output reg[3:0] status
 );
 parameter n = 8;
 parameter m = 512;
