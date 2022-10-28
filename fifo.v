@@ -9,6 +9,15 @@
 // Uses iCE40 4kb RAM blocks. For the best resuts, set buffer width and depth
 // so the total capacity is a multiple of 4096b.
 //
+// TODO: Although it works well in manual tests and in testbench, it is not
+// entirely certain how it behaves with aligned clk and clk_o posedges.
+// Perhaps buf_lvl should be synchronous, but it is not clear what should it
+// be synchronized with.
+//
+// TODO: when fifo enters its "empty" state, it actually exposes the last
+// stored word. That word is ignored by modules using status[0] bit as 
+// "data ready" input, such as uart_tx.
+//
 //
 //             +------------------+
 //     clk --->|                  |<--- clk_o
@@ -21,7 +30,7 @@
 //
 // Parameters: 
 //
-// n - bit width of a buffer. 2, 4, 8, or 16. (8)
+// n - bit width of a buffer. 2, 4, 8, 16. (8)
 // m - buffer depth, must be a power of 2. (512)
 //
 // Ports:
@@ -36,6 +45,13 @@
 // 			0101 - <= 75% full
 // 			0111 - < 100% full
 // 			1111 -   100% full
+//
+// Note:
+// The "n" parameter may actually be any value, but be mindful of the ice40
+// RAM block design and possible unusable memory. 
+// Certainly n=10 and m=2048 is possible and will glue five 4k blocks together.
+// However the "m" parameter must always be the power of 2 due to module design
+// choices.
 
 `ifndef _fifo_v_
 `define _fifo_v_
