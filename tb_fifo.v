@@ -7,7 +7,7 @@ reg clk = 0;
 reg clk_o = 0;
 reg [3:0] data;
 wire [3:0] data_o;
-wire [2:0] status;
+wire [3:0] status;
 
 initial
 begin
