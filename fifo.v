@@ -9,16 +9,6 @@
 // Uses iCE40 4kb RAM blocks. For the best resuts, set buffer width and depth
 // so the total capacity is a multiple of 4096b.
 //
-// TODO: Although it works well in manual tests and in testbench, it is not
-// entirely certain how it behaves with aligned clk and clk_o posedges.
-// Perhaps buf_lvl should be synchronous, but it is not clear what should it
-// be synchronized with.
-//
-// TODO: when fifo enters its "empty" state, it actually exposes the last
-// stored word. That word is ignored by modules using status[0] bit as 
-// "data ready" input, such as uart_tx.
-//
-//
 //             +------------------+
 //     clk --->|                  |<--- clk_o
 //             |                  |              
