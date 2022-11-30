@@ -39,7 +39,7 @@
 // clk_o	- Discards the oldest data on posedge (thus updates "data_o")
 // data_o[n]	- An output exposing the oldest data stored in FIFO
 // status[4]	- Buffer status output:
-// 			0000 - Buffer empty
+// 			0000 - Buffer empty (output invalid)
 // 			0001 - <= 25% full
 // 			0011 - <= 50% full
 // 			0101 - <= 75% full
@@ -60,13 +60,11 @@ module fifo(
 	input wire clk,
 	input wire clk_o,
 	input wire[n-1:0] data,
-	output reg[n-1:0] data_o,
+	output wire[n-1:0] data_o,
 	output reg[3:0] status
 );
 parameter n = 8;
 parameter m = 512;
-
-initial data_o <= 0;
 
 // buf_t points at the next free cell
 // buf_b points at the oldest data cell
@@ -80,6 +78,8 @@ wire [$clog2(m):0] buf_lvl;
 assign buf_t = buf_top[$clog2(m)-1:0];
 assign buf_b = buf_bot[$clog2(m)-1:0];
 assign buf_lvl = (buf_top - buf_bot);
+
+assign data_o = fifo_buf[buf_b];
 
 reg [n-1:0] fifo_buf [0:m-1];
 
@@ -103,15 +103,12 @@ begin
 	end
 end
 
+// Data output
 always @(posedge clk_o)
 begin
 	if (buf_lvl > 0)
 	begin
-		data_o <= fifo_buf[buf_b];
 		buf_bot <= buf_bot + 1;
-	end
-	else begin
-		data_o <= 0;
 	end
 end
 
