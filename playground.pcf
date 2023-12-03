@@ -1,4 +1,4 @@
-set_io EXTOSC 128
+set_io EXTOSC 129
 
 set_io BUT63 63
 set_io BUT64 64
@@ -70,7 +70,7 @@ set_io DQ3 139
 set_io DQ4 135
 set_io DQ5 134
 set_io DQ6 130
-set_io DQ7 129
+set_io DQ7 128
 set_io BA0 1
 set_io BA1 2
 set_io A0 4
