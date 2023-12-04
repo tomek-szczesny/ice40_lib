@@ -19,7 +19,7 @@ set_io R4 37
 set_io R3 45
 set_io G7 44
 set_io G6 42
-set_io G5 53
+set_io G5 43
 set_io G4 34
 set_io G3 33
 set_io G2 32
