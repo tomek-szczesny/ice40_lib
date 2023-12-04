@@ -72,8 +72,8 @@ parameter vsp = 2;
 parameter vbp = 33;
 parameter hpp = 0;
 parameter vpp = 0;
-integer ht = hva + hfp + hsp + hbp;
-integer vt = vva + vfp + vsp + vbp;
+localparam ht = hva + hfp + hsp + hbp;
+localparam vt = vva + vfp + vsp + vbp;
 
 reg [$clog2(ht)-1:0] hs;	// horizontal state
 reg [$clog2(vt)-1:0] vs;	// vertical state
@@ -109,7 +109,7 @@ begin
 	VSync <= (vs < vsp) ? vpp : ~vpp;
 
 	// Pass data to RGB outputs
-	if ((hs>(hsp+hfp-1)) and (hs<(ht-hbp)) and (vs>(vsp+vfp-1)) and (vs<(vt-vbp))) begin
+	if ((hs>(hsp+hfp-1)) && (hs<(ht-hbp)) && (vs>(vsp+vfp-1)) && (vs<(vt-vbp))) begin
 		B <= data[bd-1      :0    ];
 		G <= data[bd+gd-1   :bd   ];
 		R <= data[bd+gd+rd-1:bd+gd];
