@@ -34,6 +34,7 @@
 // 				(jump to address popped from stack)
 // 				If stack is empty, act like OUT.
 // 010dddddddddDDDD	POP	Update output register and remove a word from stack
+// 				Usefulness of this command is challenged...
 // 110nnnnnnnnnDDDD 	PUSHI	Push immediate value "n" on stack
 // 111nnnnnnnnnDDDD	DECJNZ	Decrement value on top of stack; 
 // 				jump to address "n" if stack top !=0
@@ -68,15 +69,15 @@
 //
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 //
-//                              +---------------------+
-//                    clk ----->|                     |
-//   + - - - - +                |      sequencer      |===> data_o[2^(ocw-3)]
-//              => addr[2^aw] =>|                     |
-//   |  fifo   |---> jump ----->|                     |===> pc[2^aw]
-//                              |  +-----+ +-------+  |
-//   |   aw    |                |  | rom | | stack |  |---> stop
-//              <--- ~stop      |  +-----+ +-------+  |
-//   + - - - - +                +---------------------+
+//                                             +-------------+
+//                                   clk ----->|  sequencer  |
+//   + - - - - +                               |  +-------+  |===> data_o
+//               => data_o[..] => addr[2^aw] =>|  | stack |  |     [2^(ocw-3)]
+//   |  fifo   | -> status[0] - - > jump ----->|  +-------+  |===> pc[2^aw]
+//                                             |   +-----+   |
+//   |   aw    |                               |   | rom |   |---> stop
+//               < - - - (~stop)               |   +-----+   |
+//   + - - - - +                               +-------------+
 //
 // Parameters:
 // ocw		- Total opcode width, ocw>=(3+1+ddw) (16)
@@ -87,15 +88,15 @@
 //
 // LocalParams:
 // aw		- Program memory address width = clog2(plen).
-// sw		- Stack width = ocw-ddw-3
+// sw		- Stack width = ocw-ddw-3. Must be >= aw.
 //
 // Ports: 
 // clk		- Clock input, everything is posedge triggered
 // addr[alen]	- Input for address, for externally forced jump
-// jump		- When "1", the state machine will unconditionally jump to
-// 		  address "addr". It does not ovverride any other functions of
-// 		  currently processed opcode.
-// data_o[...]	- User data output, updated through sequencer opcodes
+// jump		- When "1" and current command is "STOP", the state machine will
+// 		  jump to address "addr". It does not ovverride any other
+// 		  functions of currently processed opcode.
+// data_o[...]	- User data output, synchronous, updated through sequencer opcodes
 // pc[2^aw]	- Current Program Counter address
 // stop		- Positive when program executes STOP in a loop.
 //
@@ -130,13 +131,13 @@ module sequencer(
 	output wire [aw-1:0] pc,
 	output wire stop
 );
-parameter ocw  = 16;
-parameter ddw  = 4;
-parameter plen = 128;
+parameter ocw  = 16;		// opcode width
+parameter ddw  = 4;		// real-time data output width
+parameter plen = 128;		// program length
 parameter [0:ocw*plen-1] program = 0;
-parameter std = 256;
-localparam aw = $clog2(plen);
-localparam sw = ocw-ddw-3;
+parameter std = 256;		// stack depth
+localparam aw = $clog2(plen);	// address width
+localparam sw = ocw-ddw-3;	// stack width
 
 // Program Counter
 reg [aw-1:0] pcr;
@@ -172,16 +173,7 @@ reg [2:0] st_c;
 // Stack status 
 wire [3:0] st_s;
 
-// Stack output interpreted as ROM address
-wire [aw-1:0] st_o_addr;
-assign st_o_addr = st_o[aw-1:0];
-
-// OC Param interpreted as ROM address
-wire [aw-1:0] oc_param_addr;
-assign oc_param_addr = oc_param[aw-1:0];
-
-
-
+// ROM and Stack instantiation
 rom #(
 	.m(plen),
 	.n(ocw),
@@ -204,80 +196,59 @@ stack #(
 	.status(st_s)
 );
 
-// Asynchronous stuff - setting up things for next clock posedge
-// TODO: Break it down into separate "always" statements.
-always@(oc, oc_cmd, oc_dd, oc_param, oc_param_addr, jump, pcr, pcrp1, data_o, st_o_addr)
+// Preparing the next data output
+always@(oc_cmd[2], oc_dd, oc_param, data_o[ocw-4:ddw])
+begin
+	// All commands update "D" output
+	data_on[ddw-1:0] = oc_dd;
+
+	// Commands "0xx" update "d" output
+	if (~oc_cmd[2]) begin
+		data_on[ocw-4:ddw] = oc_param;
+	end else begin
+		data_on[ocw-4:ddw] = data_o[ocw-4:ddw];
+	end
+end
+
+// Preparing stack input data
+always@(oc_cmd[1], oc_param, pcrp1)
 begin
 	// There are only two cases when stack is written to:
 	// PUSHI and CALL. In other cases stack input is ignored.
 	// PUSHI: 110; CALL: 100
-	if (oc_cmd[1]) begin	// PUSHI
-		st_i <= oc_param;
-	end else begin		// CALL
-		st_i <= pcrp1;
-	end
+	st_i = oc_cmd[1] ? oc_param : pcrp1;
+end
 
-	// All commands update "D" output
-	data_on[ddw-1:0] <= oc_dd;
 
-	// Commands "0xx" update "d" output
-	if (~oc[ocw-1]) begin
-		data_on[ocw-4:ddw] <= oc_param;
-	end else begin
-		data_on[ocw-4:ddw] <= data_o[ocw-4:ddw];
-	end
-
-	// Determining the stack command
+// Determining stack command
+always @ (oc_cmd, st_o)
+begin
 	case (oc_cmd)
-		`SEQ_STOP:  st_c = `STK_NOP;
-		`SEQ_OUT:   st_c = `STK_NOP;
-		`SEQ_RET:   st_c = `STK_POP;	// Shouldn't matter if empty 
-		`SEQ_POP:   st_c = `STK_POP;
-		`SEQ_PUSHI: st_c = `STK_PUSH;
-		`SEQ_DECJNZ: begin
-			if (st_o < 2) begin
-				st_c = `STK_POP;
-			end else begin 
-				st_c = `STK_DEC;
-			end
-		end
-		`SEQ_JMP:  st_c = `STK_NOP;
-		`SEQ_CALL: st_c = `STK_PUSH;
+		`SEQ_STOP:   st_c = `STK_NOP;
+		`SEQ_OUT:    st_c = `STK_NOP;
+		`SEQ_RET:    st_c = `STK_POP;	// Shouldn't matter if empty 
+		`SEQ_POP:    st_c = `STK_POP;
+		`SEQ_PUSHI:  st_c = `STK_PUSH;
+		`SEQ_DECJNZ: st_c = (st_o<2) ? `STK_POP : `STK_DEC;
+		`SEQ_JMP:    st_c = `STK_NOP;
+		`SEQ_CALL:   st_c = `STK_PUSH;
 	endcase
+end
 
-	// Figuring out the next PC value
-	if (jump && stop) pcrn <= addr;
+// Figuring out the next PC value
+always @ (addr, jump, stop, pcr, pcrp1, st_o, st_s, oc_cmd, oc_param)
+begin
+	if (jump && stop) pcrn = addr;
 	else begin
 		case (oc_cmd)
-			`SEQ_STOP: begin
-				pcrn <= pcr;
-			end
-			`SEQ_OUT: begin
-				pcrn <= pcrp1;
-			end
-			`SEQ_RET: begin
-				if (st_s[0]) pcrn <= st_o_addr;
-				else pcrn <= pcrp1;
-			end
-			`SEQ_POP: begin
-				pcrn <= pcrp1;
-			end
-			`SEQ_PUSHI: begin
-				pcrn <= pcrp1;
-			end
-			`SEQ_DECJNZ: begin
-				if (st_o < 2) begin
-					pcrn <= pcrp1;
-				end else begin 
-					pcrn <= oc_param_addr;
-				end
-			end
-			`SEQ_JMP: begin
-				pcrn <= oc_param_addr;
-			end
-			`SEQ_CALL: begin
-				pcrn <= oc_param_addr;
-			end
+			`SEQ_STOP: pcrn = pcr;
+			`SEQ_OUT: pcrn = pcrp1;
+			`SEQ_RET: pcrn = st_s[0] ? st_o : pcrp1;
+			`SEQ_POP: pcrn = pcrp1;
+			`SEQ_PUSHI: pcrn = pcrp1;
+			`SEQ_DECJNZ: pcrn = (st_o<2) ? pcrp1 : oc_param;
+			`SEQ_JMP: pcrn = oc_param;
+			`SEQ_CALL: pcrn = oc_param;
 		endcase
 	end
 end
