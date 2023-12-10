@@ -6,12 +6,15 @@
 // This may be used for hard-coding complex or repeatable patterns.
 // During operation, it reads instructions from ROM and executes them.
 //
-// It is possible to alter execution order by forcing a program counter jump.
-// This way, many procedures can be stored and called by external logic.
-//
 // Instructions are specifically conceived to support looping and calling 
 // subroutines. A stack is implemented to facilitate looping and control
 // transfer.
+// 
+// The module supports externally commanded jumps when it's in STOP state.
+// This allows for programming multiple subroutines in a single ROM, 
+// called by external logic, and protects against interrupting unfinished
+// procedures. 
+// FIFO can be used for scheduling tasks with no additional logic.
 //
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 //
@@ -65,15 +68,15 @@
 //
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 //
-//              +----------------------------------+
-//    clk ----->|                                  |
-//              |            sequencer             |===> data_o[2^(ocw-3)]
-// addr[2^aw] =>|                                  |
-//   jump ----->|                                  |===> pc[2^aw]
-//              |               +-----+ +-------+  |
-//     	        |               | rom | | stack |  |---> stop
-//              |               +-----+ +-------+  |
-//              +----------------------------------+
+//                              +---------------------+
+//                    clk ----->|                     |
+//   + - - - - +                |      sequencer      |===> data_o[2^(ocw-3)]
+//              => addr[2^aw] =>|                     |
+//   |  fifo   |---> jump ----->|                     |===> pc[2^aw]
+//                              |  +-----+ +-------+  |
+//   |   aw    |                |  | rom | | stack |  |---> stop
+//              <--- ~stop      |  +-----+ +-------+  |
+//   + - - - - +                +---------------------+
 //
 // Parameters:
 // ocw		- Total opcode width, ocw>=(3+1+ddw) (16)
@@ -243,7 +246,7 @@ begin
 	endcase
 
 	// Figuring out the next PC value
-	if (jump) pcr <= addr;
+	if (jump && stop) pcrn <= addr;
 	else begin
 		case (oc_cmd)
 			`SEQ_STOP: begin
