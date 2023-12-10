@@ -9,10 +9,9 @@
 // It is possible to alter execution order by forcing a program counter jump.
 // This way, many procedures can be stored and called by external logic.
 //
-// The opcodes are inspired by a subset of AVR instructions, specifically
-// crafted to support looping and calling subroutines (1 level deep to save
-// resources).
-// No stack has been implemented because it would hardly be useful. 
+// Instructions are specifically conceived to support looping and calling 
+// subroutines. A stack is implemented to facilitate looping and control
+// transfer.
 //
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 //
@@ -22,7 +21,7 @@
 // x - ignored
 // D - real time output data (updated on each clock cycle)
 // d - additional output data
-// n - param
+// n - parameters
 //
 // 000dddddddddDDDD	STOP	Update output register and stop.
 // 				Sequencer may only be resumed through
@@ -30,7 +29,7 @@
 // 001dddddddddDDDD 	OUT	Update output register
 // 011dddddddddDDDD	RET	Update output register and return 
 // 				(jump to address popped from stack)
-// 				If stack was empty, act like OUT.
+// 				If stack is empty, act like OUT.
 // 010dddddddddDDDD	POP	Update output register and remove a word from stack
 // 110nnnnnnnnnDDDD 	PUSHI	Push immediate value "n" on stack
 // 111nnnnnnnnnDDDD	DECJNZ	Decrement value on top of stack; 
@@ -42,14 +41,12 @@
 //
 //
 // Notes:
-// 1. The opcode length is not fixed. Opcode width "OC" and "D" width are module
+// 1. The opcode length is not fixed. Opcode width and "D" field width are module
 // parameters, which will directly affect the width of "n" and "d" fields.
 // These cannot be narrower than 1 bit.
 // 2. Stack has the bit width of "n" field.
 // 3. Stack width limits the ROM address space (to support CALL).
-// 3. "data_o" output register is "d" and "D" fields combined. 
-// 4. If "n" fields are shorter than available addresses, they are treated
-// as the most significant bits of the address, and padded with zeroes.
+// 4. "data_o" output register is "d" and "D" fields combined. 
 // 5. All opcodes execute in one clock cycle. 
 //
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -63,6 +60,7 @@
 // 	OUT		4'b1100
 // 	OUT		4'b0110
 //	DECJNZ	loop 	4'b0011
+// 	OUT		4'b1001
 //	STOP 		4'b0000
 //
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -94,19 +92,17 @@
 // jump		- When "1", the state machine will unconditionally jump to
 // 		  address "addr". It does not ovverride any other functions of
 // 		  currently processed opcode.
-// data_o[...] - User data output, updated through sequencer opcodes
+// data_o[...]	- User data output, updated through sequencer opcodes
 // pc[2^aw]	- Current Program Counter address
 // stop		- Positive when program executes STOP in a loop.
 //
 // Notes:
-// 1. Physical ROM width is equal to OC, and stack width is (OC-D-3).
+// 1. Physical ROM width is equal to ocw, and stack width is sw.
 // This is strongly recommended to keep stack width at or below 16,
-// and depth at 256. That's far more than one will ever need, and will reduce
-// stack to a single Block RAM cell. 
+// and depth at 256. This will reduce stack to a single Block RAM cell. 
 // 2. Because iceRAM blocks cannot initialize their first address, PC starts
-// at address "1". Thus ROM must be at least one word deeper than program
-// length.
-//
+// at address "1". Thus the first ROM opcode will be ignored, but nevertheless 
+// must be specified by the designer. 
 //
 `ifndef _sequencer_v_
 `define _sequencer_v_
@@ -205,12 +201,12 @@ stack #(
 	.status(st_s)
 );
 
-// Asynchronous stuff - mostly preparing data and commands for stack
+// Asynchronous stuff - setting up things for next clock posedge
+// TODO: Break it down into separate "always" statements.
 always@(oc, oc_cmd, oc_dd, oc_param, oc_param_addr, jump, pcr, pcrp1, data_o, st_o_addr)
 begin
 	// There are only two cases when stack is written to:
 	// PUSHI and CALL. In other cases stack input is ignored.
-	// To simplify synthesized logic, we do it as a separate case.
 	// PUSHI: 110; CALL: 100
 	if (oc_cmd[1]) begin	// PUSHI
 		st_i <= oc_param;
@@ -283,7 +279,7 @@ begin
 	end
 end
 
-// Synchronous stuff - writing to registers and so on
+// Synchronous stuff
 always@(posedge clk)
 begin
 	data_o <= data_on;
