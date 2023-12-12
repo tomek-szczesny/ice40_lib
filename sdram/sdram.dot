@@ -1,0 +1,46 @@
+digraph {
+//	newrank=true;
+	
+
+	{rank="source";	<FIFO\ncmd>; <FIFO\naddr>; <FIFO\ndata_out>; <FIFO\ndata_in>}
+	{rank="same"; <seq>; <IO logic>}
+	{rank="sink"; <Pins\naddr>; <Pins\ncmd>; <Pins\nD0-D7>}
+
+	subgraph cluster_core_if {
+	rank="souce";
+	label="Core Interface";
+		graph[style=dotted];
+		<FIFO\ncmd>
+		<FIFO\ndata_out>
+		<FIFO\ndata_in>
+
+	}
+
+	subgraph cluster_logic {
+	label="Logic";
+	graph[style=dotted];
+	rank="same";
+		<seq>
+		<IO logic>
+	}
+
+	subgraph cluster_pins {
+	rank="sink";
+	label="FPGA Pins";
+		graph[style=dotted];
+		<Pins\naddr>
+		<Pins\ncmd>
+		<Pins\nD0-D7>
+	}
+	{node[style=filled][color=lightgreen];
+	}
+
+	<FIFO\ncmd> -> <seq> [label="addr,\nstatus[0]"]
+	<seq> -> <FIFO\ncmd> [label="~stop"]
+	<seq> -> <IO logic> [label="data_o"]
+	<IO logic> -> <Pins\naddr>
+	<IO logic> -> <Pins\ncmd>
+	<IO logic> -> <FIFO\ndata_out> -> <Pins\nD0-D7> -> <FIFO\ndata_in>
+	<IO logic> -> <FIFO\ndata_in>
+	<FIFO\naddr> -> <IO logic>
+}
