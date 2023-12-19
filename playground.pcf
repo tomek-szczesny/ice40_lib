@@ -1,7 +1,8 @@
 set_io EXTOSC 129
 
-set_io BUT63 63
-set_io BUT64 64
+set_io -pullup yes BUT63 63
+set_io -pullup yes BUT64 64
+
 set_io LED78 78
 set_io LED79 79
 set_io LED80 80
