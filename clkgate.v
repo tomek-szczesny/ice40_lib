@@ -5,18 +5,18 @@
 // clkgate passes clock pulses reliably and without glitches.
 // The gate input is probed only when in = 0.
 //
-//            +------------------+
-//            |                  |
-//     in --->|      clkdiv      |---> out
-//            |                  |
-//            +------------------+
+//            +-----------------+
+//            |                 |
+//     in --->|     clkgate     |---> out
+//   gate --->|                 |
+//            +-----------------+
 //
 // Parameters:
 // None.
 //
 // Ports: 
 // in	- Clock input
-// gate`- Clock gate input
+// gate - Clock gate input
 // out	- Clock output, active when gate = 1.
 //
 `ifndef _clkgate_v_
