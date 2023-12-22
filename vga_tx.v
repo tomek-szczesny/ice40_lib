@@ -48,6 +48,7 @@
 //
 `ifndef _vga_tx_v_
 `define _vga_tx_v_
+`include "clkgate.v"
 
 module vga_tx(
 	input wire clk,
@@ -77,18 +78,23 @@ localparam vt = vva + vfp + vsp + vbp;
 
 reg [$clog2(ht)-1:0] hs;	// horizontal state
 reg [$clog2(vt)-1:0] vs;	// vertical state
-reg fetch_gate;	
-assign fetch = fetch_gate & clk;
+wire fetch_gate;	
+clkgate vga_tx_ckg (
+	.in(clk),
+	.gate(fetch_gate),
+	.out(fetch)
+);
 
 initial HSync <= ~hpp;
 initial VSync <= ~vpp;
 initial R = 0;
 initial G = 0;
 initial B = 0;
-initial fetch <= 0;
 initial hs = 0;
 initial vs = 0;
-initial fetch_gate = 0;
+
+// Fetch logic
+assign fetch_gate = (hs == ht-1 || hs < hva-1) && (vs == vt-1 || vs < vva-1);
 
 always @(posedge clk)
 begin
@@ -105,20 +111,18 @@ begin
 	end
 
 	// Generate sync pulses
-	HSync <= (hs < hsp) ? hpp : ~hpp;
-	VSync <= (vs < vsp) ? vpp : ~vpp;
+	HSync <= (hs>=hva+hfp && hs < ht-hbp) ? hpp : ~hpp;
+	VSync <= (vs>=vva+vfp && vs < vt-vbp) ? vpp : ~vpp;
 
 	// Pass data to RGB outputs
-	if ((hs>(hsp+hfp-1)) && (hs<(ht-hbp)) && (vs>(vsp+vfp-1)) && (vs<(vt-vbp))) begin
+	if (hs<hva && vs<vva) begin
 		B <= data[bd-1      :0    ];
 		G <= data[bd+gd-1   :bd   ];
 		R <= data[bd+gd+rd-1:bd+gd];
-		fetch_gate <= 1;
 	end else begin
 		B <= 0;
 		G <= 0;
 		R <= 0;
-		fetch_gate <= 0;
 	end
 end
 

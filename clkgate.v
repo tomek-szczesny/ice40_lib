@@ -28,14 +28,12 @@ module clkgate(
 	output wire out
 );
 
-reg latch = 0;
+reg latch;
 assign out = (in & latch);
 
-always@(in or gate)
+always@(negedge in)
 begin
-	if (~in) begin
-		latch <= gate;
-	end
+	latch <= gate;
 end
 
 endmodule
