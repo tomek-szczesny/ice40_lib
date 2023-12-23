@@ -50,7 +50,7 @@ module fifo(
 	input wire clk,
 	input wire clk_o,
 	input wire[n-1:0] data,
-	output wire[n-1:0] data_o,
+	output reg[n-1:0] data_o,
 	output reg[3:0] status
 );
 parameter n = 8;
@@ -69,7 +69,6 @@ assign buf_t = buf_top[$clog2(m)-1:0];
 assign buf_b = buf_bot[$clog2(m)-1:0];
 assign buf_lvl = (buf_top - buf_bot);
 
-assign data_o = fifo_buf[buf_b];
 
 reg [n-1:0] fifo_buf [0:m-1];
 
@@ -99,6 +98,7 @@ begin
 	if (buf_lvl > 0)
 	begin
 		buf_bot <= buf_bot + 1;
+		data_o <= fifo_buf[buf_b];
 	end
 end
 
