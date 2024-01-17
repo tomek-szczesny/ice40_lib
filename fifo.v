@@ -73,7 +73,7 @@ assign buf_lvl = (buf_top - buf_bot);
 reg [n-1:0] fifo_buf [0:m-1];
 
 // Status output
-always@(buf_lvl)
+always@*
 begin
 	if      (buf_lvl == 0)     status <= 4'b0000;
 	else if (buf_lvl <=   m/4) status <= 4'b0001;
