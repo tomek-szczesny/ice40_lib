@@ -20,7 +20,10 @@ begin
 	$display("clk: %d, addr: %d, data_o: %d", clk, add, data_o);
 end
 
-always @ (posedge clk) add <= add + 1;
+always @ (negedge clk) 
+begin
+	add <= add + 1;
+end
 
 rom #(
 	.m(8),

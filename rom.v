@@ -4,7 +4,8 @@
 // Uses iCE40 4kb RAM blocks. For the best resuts, set ROM width and depth
 // so the total capacity is a multiple of 4096b.
 //
-// As mentioned in ICE40 docs, the first memory address "0" cannot be initialized. 
+// As mentioned in ICE40 docs, the first memory address cannot be initialized. 
+// To mitigate this issue, address "0" pints at a separate LUT-based reg.
 //
 // The ROM contents are to be defined as "data" parameter. For backward
 // compatibility with Verilog (as opposed to SystemVerilog), it is represented
@@ -60,18 +61,24 @@ localparam offset = m - content_size;
 reg [n-1:0] rom [0:m-1];
 genvar i;
 generate
-	for (i=0; i<content_size; i=i+1) begin
+	for (i=1; i<content_size; i=i+1) begin
 		initial rom[i] = data[n*(i+offset):n*(i+1+offset)-1];
 	end
 endgenerate
 
-reg [$clog2(m):0] buf_a = 0;
-assign data_o = rom[buf_a];
+// separate register for address 0, which cannot be initialized in HW
+reg [n-1:0] rom0;
+initial rom0 = data[n*(offset):n*(1+offset)-1];
+
+reg [n-1:0] brout;	// Block RAM output
+reg az;			// Address Zero
+assign data_o = az ? rom0 : brout;
 
 // Data output
 always @(posedge clk)
 begin
-	buf_a <= address;
+	brout <= rom[address];
+	az <= (address == 0);
 end
 
 endmodule
