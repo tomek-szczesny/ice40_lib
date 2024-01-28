@@ -87,20 +87,27 @@ endmodule
 //
 // blue_mono
 // Monochromatic variant of Blue Noise dither.
-// Uses precalculated 16x16 map found in ./assets/bluenoise16.data.
-// Requires pixel clock to operate internal ROM.
-// Texture sourced from:
+// Uses precalculated blue noise maps.
+// Requires pixel clock to operate internal ROM (synthesized as RAM blocks).
+// Textures sourced from:
 // https://github.com/Calinou/free-blue-noise-textures/blob/master/16_16/HDR_L_0.png
+// https://github.com/Calinou/free-blue-noise-textures/blob/master/32_32/HDR_L_0.png
+// https://github.com/Calinou/free-blue-noise-textures/blob/master/64_64/HDR_L_0.png
+// Note: Textures have been flattened to 8-bit depth.
 //
 //                          +-----------------+
 //                in[8] ===>|                 |---> out
-//                 x[4] ===>|    blue_mono    |
-//                 y[4] ===>|                 |
+//                 x[n] ===>|    blue_mono    |
+//                 y[n] ===>|                 |
 //                   clk--->|                 |
 //                          +-----------------+
 //
 // Parameters:
-// None
+// map	- Select blue noise map. Larger maps use more resources, especially RAM
+// 	  blocks. Available sizes: 16, 32, 64. (16)
+// 
+// Local Params:
+// n	- Pixel coordinate input width, depends on blue noise map size.
 //
 // Ports:
 // in	- Pixel value input, pad narrower values towards MSB
@@ -109,55 +116,43 @@ endmodule
 // clk  - Pixel clock, posedge latches input data
 // out	- Monochromatic pixel output
 //
-module blue16_mono (
+module blue_mono (
 	input wire [7:0] in,
-	input wire [3:0] x,
-	input wire [3:0] y,
+	input wire [n-1:0] x,
+	input wire [n-1:0] y,
 	input wire clk,
 	output reg out
 );
 
+parameter map = 16;
+localparam n = $clog2(map);
+
 reg [7:0] bn;
 
-//TODO: First byte should be zero as it cannot be initialized in hardware.
-localparam bluenoise16_pattern = {128'h6f318ea271c347b1c932975e422555fc, \
-				128'h1963efde20fa9413266adcaac28a0da7,
-				128'h7db24f0f41ad7b57d583f7177436e5d4,
-				128'h29ca9884bd6835eca13e01b54df19344,
-				128'h02f4385be605cc1cbb6590ce215cbe6b,
-				128'hdfa47224d69c8b46f554e2307e9e1187,
-				128'h53c415fe4c2db3730c28a969fdb0d33b,
-				128'h64b4917aac61eb81d795c708481aee2c,
-				128'he81f450bcd3a12c1583c70dd8c567899,
-				128'hd082f3a0e06e22f8a518eab834c6ab06,
-				128'h6cbc335989ba9a4e2f86629d23f95f3f,
-				128'h104bdb270143e479c5f0034a7f14e38f,
-				128'hf6af77c8fb67920ed1ae6ddac052cba3,
-				128'h1d5d9616a6b6371e5a402a8da839752e,
-				128'hd8e93d8051edd9769ffeb91bf2660485,
-				128'h49bf09d22b600788e7500a7ce1cf9bb7
-};
+// Generating noise map ROM
+// due to limitations of Verilog, filename cannot be a module param
+// Thus ROM submodule cannot be used here.
+reg [7:0] rom [0:(map*map)-1];
 
-rom #(
-	.m(256),
-	.n(8),
-	.data(bluenoise16_pattern),
-	.content_size(256)
-) bluerom (
-	.clk(clk),
-	.address({x,y}),
-	.data_o(bn)
-);
-
-assign out = (in > bn);
-/*
-always @ (in, bn)
-begin
-	if 	(in == 0) out <= 0;
-	else if (in == 255) out <= 1;
-	else     out <= (in > bn);
+initial begin
+	if (map == 16) $readmemh("assets/bn16.mem", rom);
+	if (map == 32) $readmemh("assets/bn32.mem", rom);
+	if (map == 64) $readmemh("assets/bn64.mem", rom);
 end
-*/
+
+always @ (posedge clk)
+begin
+	bn <= rom[{x,y}];
+end
+
+always @ *
+begin
+	if (in < 4) out <= 0;
+	else if (in > 251) out <= 1;
+	else out <= (in > bn);
+end
+//assign out = (in > bn);
+
 endmodule
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
