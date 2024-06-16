@@ -58,14 +58,17 @@ begin
 		fetch <= 1;
 		state <= state + 1;
 	end
-	if (state > 0 && state < 9) begin
-		out <= int_buf[state - 1];
+	if (state != 0 && state != 9) begin
+		//out <= int_buf[state - 1];
+		out <= int_buf[0];
+		int_buf[0:6] <= int_buf[1:7];
 		fetch <= 0;
 		state <= state + 1;
 	end
-	if (state >= 9) begin
+	if (state == 9) begin
 		out <= 1;
 		state <= 0;
+		fetch <= 0;
 	end
 end
 

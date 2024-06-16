@@ -75,18 +75,23 @@ reg [n-1:0] fifo_buf [0:m-1];
 // Status output
 always@*
 begin
+	status[0]   <= (buf_lvl != 0);
+	status[2:1] <= (buf_lvl[$clog2(m):$clog2(m)-1]);
+	status[3]   <= (buf_lvl == m);
+/*
 	if      (buf_lvl == 0)     status <= 4'b0000;
 	else if (buf_lvl <=   m/4) status <= 4'b0001;
 	else if (buf_lvl <= 2*m/4) status <= 4'b0011;
 	else if (buf_lvl <= 3*m/4) status <= 4'b0101;
 	else if (buf_lvl <    m  ) status <= 4'b0111;
 	else                       status <= 4'b1111;	
+*/
 end
 
 // Data input
 always @(posedge clk)
 begin
-	if(buf_lvl < m) begin
+	if(buf_lvl != m) begin
 		fifo_buf[buf_t] <= data;
 		buf_top <= buf_top + 1;
 	end
@@ -95,7 +100,7 @@ end
 // Data output
 always @(posedge clk_o)
 begin
-	if (buf_lvl > 0)
+	if (buf_lvl != 0)
 	begin
 		buf_bot <= buf_bot + 1;
 		data_o <= fifo_buf[buf_b];

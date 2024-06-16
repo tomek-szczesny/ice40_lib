@@ -87,14 +87,16 @@ begin
 		osb <= osb + in;
 		if (osc == o-1) begin
 			state <= state + 1;
-			oub[state-2] <= (arb);
+			//oub[state-2] <= (arb);
+			oub[7] <= (arb);
+			oub[0:6] <= oub[1:7];
 			osb <= 0;
 			osc <= 0;
 		end
 	end
 
 	// While receiving stop bit, out is pushed and clk_out toggled
-	// Stop part is cut short to 3 clock cycles in case receiver lags
+	// Stop part is cut short to 2 clock cycles in case receiver lags
 	// behind the transmitter.
 	if (state >= 10) begin
 		osc <= osc + 1;
