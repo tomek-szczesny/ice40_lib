@@ -26,7 +26,7 @@
 // Ports:
 // clk		- a transmitter clock input. Typically 9.6 kHz or 115.2 kHz.
 // data_rdy	- High state indicates the data is ready to be sent.
-// data[8] 	- 1-byte wide input, fetched at each "write" posedge.
+// data[8] 	- 1-byte wide input, latched after each start bit.
 // out		- UART data output, typically wired to a physical pin.
 // fetch	- Sends a positive pulse after data has been fetched.
 //
@@ -44,24 +44,30 @@ initial out <= 1;
 initial fetch <= 0;
 
 reg [3:0] state;		// Transmitter machine state
-// 0      Start bit (and fetch buffer data)
-// 1 - 8  Sending 8 bits of data
+// 0      Start bit, fetch pulse
+// 1      First data bit, latching data[8] 
+// 2 - 8  Sending the remaining bits of data
 // 9 	  Stop bit
 
-reg [7:0] int_buf;
+reg [6:0] int_buf;
 
 always @(posedge clk)
 begin
 	if (state == 0 && data_rdy) begin
-		int_buf <= data;
 		out <= 0;
 		fetch <= 1;
 		state <= state + 1;
 	end
-	if (state != 0 && state != 9) begin
+	if (state == 1) begin
+		int_buf[6:0] <= data[7:1];
+		out <= data[0];
+		fetch <= 0;
+		state <= state + 1;
+	end
+	if (state > 1 && state < 9) begin
 		//out <= int_buf[state - 1];
 		out <= int_buf[0];
-		int_buf[0:6] <= int_buf[1:7];
+		int_buf[5:0] <= int_buf[6:1];
 		fetch <= 0;
 		state <= state + 1;
 	end

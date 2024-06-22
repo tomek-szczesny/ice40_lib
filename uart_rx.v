@@ -89,7 +89,7 @@ begin
 			state <= state + 1;
 			//oub[state-2] <= (arb);
 			oub[7] <= (arb);
-			oub[0:6] <= oub[1:7];
+			oub[6:0] <= oub[7:1];
 			osb <= 0;
 			osc <= 0;
 		end
