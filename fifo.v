@@ -4,6 +4,13 @@
 // Accepts and exposes data of fixed width at the other end.
 // Both ends can be clocked independently.
 //
+// On each clk posedge, data[n] is stored in FIFO.
+// On each clk_o posedge, data_o[n] is updated with the oldest stored value.
+//
+// Note that on startup, data_o[n] is invalid, and the first stored value has
+// to be clocked out.
+// ~status[0] indicates that there's nothing more to be clocked out. 
+//
 // If there is no data to be discarded, the output is 0.
 //
 // Uses iCE40 4kb RAM blocks. For the best resuts, set buffer width and depth
@@ -21,7 +28,7 @@
 // Parameters: 
 //
 // n - bit width of a buffer. 2, 4, 8, 16. (8)
-// m - buffer depth, must be a power of 2. (512)
+// m - buffer depth, must be a power of 2 and >=32. (512)
 //
 // Ports:
 // clk		- a clock input. Posedge stores "data[n]".
@@ -30,11 +37,11 @@
 // data_o[n]	- An output exposing the oldest data stored in FIFO
 // status[4]	- Buffer status output:
 // 			0000 - Buffer empty (output invalid)
-// 			0001 - <= 25% full
-// 			0011 - <= 50% full
-// 			0101 - <= 75% full
-// 			0111 - < 100% full
-// 			1111 -   100% full
+// 			0001 - 0 - 25% full
+// 			0011 - 25 - 50% full
+// 			0101 - 50 - 75% full
+// 			0111 - 75 - 95% full
+// 			1111 - 95 - 100% full
 //
 // Note:
 // The "n" parameter may actually be any value, but be mindful of the ice40
@@ -56,17 +63,20 @@ module fifo(
 parameter n = 8;
 parameter m = 512;
 
+localparam w = $clog2(m);
+
 // buf_t points at the next free cell
 // buf_b points at the oldest data cell
 // Both have one bit wider versions so buf_lvl actually can count up to "m".
+// As a result, MSB of buf_lvl indicates full buffer.
 
-reg  [$clog2(m):0] buf_top = 0;
-reg  [$clog2(m):0] buf_bot = 0;
-wire [$clog2(m)-1:0] buf_t;
-wire [$clog2(m)-1:0] buf_b;
-wire [$clog2(m):0] buf_lvl;
-assign buf_t = buf_top[$clog2(m)-1:0];
-assign buf_b = buf_bot[$clog2(m)-1:0];
+reg  [w:0] buf_top = 0;
+reg  [w:0] buf_bot = 0;
+wire [w-1:0] buf_t;
+wire [w-1:0] buf_b;
+wire [w:0] buf_lvl;
+assign buf_t = buf_top[w-1:0];
+assign buf_b = buf_bot[w-1:0];
 assign buf_lvl = (buf_top - buf_bot);
 
 
@@ -76,8 +86,8 @@ reg [n-1:0] fifo_buf [0:m-1];
 always@*
 begin
 	status[0]   <= (buf_lvl != 0);
-	status[2:1] <= (buf_lvl[$clog2(m):$clog2(m)-1]);
-	status[3]   <= (buf_lvl == m);
+	status[2:1] <= (buf_lvl[w-1:w-2]);
+	status[3]   <= (&(buf_lvl[w-1:w-4]) || buf_lvl[w]);
 /*
 	if      (buf_lvl == 0)     status <= 4'b0000;
 	else if (buf_lvl <=   m/4) status <= 4'b0001;
@@ -91,7 +101,7 @@ end
 // Data input
 always @(posedge clk)
 begin
-	if(buf_lvl != m) begin
+	if(buf_lvl < m) begin
 		fifo_buf[buf_t] <= data;
 		buf_top <= buf_top + 1;
 	end
