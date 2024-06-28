@@ -6,6 +6,7 @@ module top(
 reg  clk_in = 0;
 reg  [3:0] div = 0;
 wire clk_out;
+wire reset;
 
 initial
 begin
@@ -29,7 +30,7 @@ end
 always
 begin
 	#5 clk_in <= ~clk_in;
-	#5 $display ("in: %d, div: %02d, out: %d", clk_in, div, clk_out);
+	$display ("in: %d, div: %02d, out: %d, reset: %d", clk_in, div, clk_out, reset);
 end
 
 
@@ -38,6 +39,7 @@ clkdiv_prog #(
 	MUT (
 	.in(clk_in),
 	.div(div),
+	.reset(reset),
 	.out(clk_out));
 
 
