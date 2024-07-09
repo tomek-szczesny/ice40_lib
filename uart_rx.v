@@ -20,12 +20,6 @@
 // out[8] 	- 1-byte wide output register with received data
 // clk_out	- Sends short positive pulse when out[8] is updated
 //
-// Tip: Higher oversampling factor may be helpful in obtain better clock
-// frequency fit. Consider this example:
-// System clock: 100 MHz
-// UART baudrate: 4 M
-// With oversampling = 5, the input clock is 20 MHz, which can be divided with
-// no error.
 //
 `ifndef _uart_rx_v_
 `define _uart_rx_v_
@@ -58,7 +52,7 @@ begin
 	if (state == 0) begin
 		clk_out <= 0;
 		if (in == 0) begin
-			state <= 1;
+			state <= state + 1;
 			osc <= 1;
 			osb <= in;
 		end
@@ -70,7 +64,7 @@ begin
 		osb <= osb + in;
 		if (osc == o-1) begin
 			if (~arb) begin
-				state <= 2;
+				state <= state + 1;
 			end else begin
 				state <= 0;
 			end
