@@ -1,4 +1,4 @@
-`include "clkdiv_2_3.v"
+`include "clkdiv.v"
 
 module top(
 );
