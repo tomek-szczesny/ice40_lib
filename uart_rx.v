@@ -207,7 +207,7 @@ end
 endmodule
 
 // Unbuffered UART Receiver with variable oversampling factor
-// and resettable "data ready" latch
+// and with resettable "data ready" latch
 // by Tomek Szczęsny 2024
 //
 // Oversampling factor is latched in on every start bit.
@@ -298,7 +298,7 @@ begin
 		end
 	end
 
-	// While receiving stop bit, out is pushed and dr asserted 
+	// While receiving stop bit, out is pushed out 
 	// Stop part is cut short to 2 clock cycles in case receiver lags
 	// behind the transmitter.
 	if (state >= 10) begin
@@ -308,7 +308,7 @@ begin
 	end
 end
 
-// Data Ready
+// Data Ready logic
 always @ (negedge clk, posedge dr_rst)
 begin
 	if (dr_rst) dr <= 0;
@@ -338,7 +338,6 @@ endmodule
 // in		- UART input
 // out[8] 	- 1-byte wide output register with received data
 // clk_out	- Sends short positive pulse when out[8] is updated
-//
 //
 
 module uart_rx_no(
@@ -380,6 +379,82 @@ begin
 
 	// Stop bit (State 1)
 	clk_out <= (~state[3] && state[0]);
+end
+endmodule
+
+// Unbuffered UART Receiver without oversampling
+// and with resettable "data ready" latch
+// by Tomek Szczęsny 2024
+//
+// A simplified, lightweight UART RX that has no tolerance for clock errors.
+// Designed to facilitate internal communication within FPGA,
+// thus using the same clock source as the transmitter.
+//
+// Positive dr_rst pulse asynchronously resets dr.
+//
+//             +---------------+                      clk --->+ ~ ~ ~ ~ ~ ~ ~ ~                  
+//      in --->|               |===> out[8] = =rx_data[8] ===>                                  
+//             | uart_rx_no_dr |<--- dr_rst - -  rx_reset <---|  uart_matrix                
+//     clk --->|               |---> dr - - - -  rx_ready --->    internals                 
+//             +---------------+                              + ~ ~ ~ ~ ~ ~ ~ ~
+//
+// Parameters: 
+// None.
+//
+// Ports:
+// clk		- a receiver clock input. Must be the same as TX clk.
+// in		- UART input
+// out[8] 	- 1-byte wide output register with received data
+// dr		- Positive logic Data Ready signal
+// dr_rst	- Data Ready Reset
+//
+
+module uart_rx_no_dr(
+	input wire clk,
+	input wire in,
+	output reg [7:0] out = 0,
+	output reg dr = 0,
+	input wire dr_rst
+);
+
+reg [6:0] oub;			// Output buffer
+reg [3:0] state = 2;		// Receiver machine state
+// 0		The last data bit
+// 1		Stop Bit
+// 2		Idle / Start Bit
+// 9 - 15	Data bits [0:6]
+// Illegal states are not handled.
+
+always @(posedge clk)
+begin
+	// Waiting for a start bit (State 2)
+	if (~state[3] && state[1]) begin
+		if (in == 0) begin		// Start bit has been received
+			state <= 9;
+		end
+	end
+	else state <= state + 1;
+	
+	// Data bits (States 9 - 15)
+	if (state[3]) begin
+		oub[6] <= in;
+		oub[5:0] <= oub[6:1];
+	end
+
+	// The last bit (State 0)
+	if (~state[3] && ~state[1] && ~state[0]) begin
+		out[7] <= in;
+		out[6:0] <= oub;
+	end
+
+	// State 1 is handled in Data Ready logic section
+end
+
+// Data Ready logic
+always @ (negedge clk, posedge dr_rst)
+begin
+	if (dr_rst) dr <= 0;
+	else if (~state[3] && state[0]) dr <= 1;;
 end
 
 endmodule
