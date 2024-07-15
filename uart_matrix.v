@@ -51,6 +51,7 @@
 // tx[8]	- Parallel data frame output, connect to all FIFOs
 // tx_cke[n]	- FIFO clock enable signal outputs, one for each FIFO
 //
+`include "uart_rx.v"
 
 module uart_matrix (
 	input wire clk,				// master clock 
@@ -77,10 +78,7 @@ generate
 	for (i=1; i<m; i=i+1) initial lut[i] = lut_default[n*i:n*(i+1)-1];
 endgenerate
 
-// Input data stream receivers, with a twist
-// Each must signal that new data is present.
-// This is accomplished by the uart_rx wrapper
-// defined in a separate module below.
+// Input data stream receivers
 wire [7:0] rx_out [0:m-1];
 reg  [m-1:0] rx_reset;
 wire [m-1:0] rx_newdata;
@@ -88,12 +86,12 @@ wire [m-1:0] rx_newdata;
 generate
 	for (i=0; i<m; i=i+1)
 	begin
-		uart_matrix_rx rx_core (
+		uart_rx_no_dr rx_core (
 			.clk(clk),
 			.in(rx[i]),
 			.out(rx_out[i]),
-			.reset(rx_reset[i]),
-			.newdata(rx_newdata[i])
+			.dr_rst(rx_reset[i]),
+			.dr(rx_newdata[i])
 		);
 	end
 endgenerate
@@ -123,31 +121,6 @@ begin
 	if (lut_cke) lut[lut_addr] <= lut_data;
 end
 
-endmodule
-
-//
-// uart_rx_no wrapper with new data signaling
-//
-`include "uart_rx.v"
-module uart_matrix_rx (
-	input wire clk,
-	input wire in,
-	output wire [7:0] out,
-	input wire reset,
-	output reg newdata = 0
-);
-	wire clk_out;
-	uart_rx_no rx (
-		.clk(clk),
-		.in(in),
-		.out(out),
-		.clk_out(clk_out)
-	);
-	always @ (posedge clk_out, posedge reset)
-	begin
-		if (reset) newdata <= 0;
-		else newdata <= 1;
-	end
 endmodule
 
 `endif
