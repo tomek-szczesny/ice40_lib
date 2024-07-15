@@ -206,6 +206,116 @@ end
 
 endmodule
 
+// Unbuffered UART Receiver with variable oversampling factor
+// and resettable "data ready" latch
+// by Tomek Szczęsny 2024
+//
+// Oversampling factor is latched in on every start bit.
+// Positive dr_rst pulse asynchronously resets dr.
+//
+//             +---------------+               faster_clk --->+ - - - - - - - -                  
+//      in --->|               |===> out[8] = = = data[8] ===>                                  
+//   o[ow] ===>| uart_rx_vo_dr |<--- dr_rst - - - - fetch <---|     uart_tx                 
+//     clk --->|               |---> dr - - - -  data_rdy --->     (reclock)                 
+//             +---------------+                              + - - - - - - - -
+//
+// Parameters: 
+// ow		- 'o' input width, ow >= 3 (3)
+//
+// Ports:
+// o		- Oversampling factor, o > 3
+// clk		- a receiver clock input. Must be close to "o" * data rate.
+// in		- UART input, typically a physical pin
+// out[8] 	- 1-byte wide output register with received data
+// dr		- Positive logic Data Ready signal
+// dr_rst	- Data Ready Reset
+//
+//
+
+module uart_rx_vo_dr(
+	input wire clk,
+	input wire in,
+	input wire [ow-1:0] o,
+	output reg [7:0] out = 0,
+	input wire dr_rst,
+	output reg dr = 0
+);
+
+parameter ow = 3;
+
+reg [3:0] state = 0;		// Receiver machine state
+// 0		Idle
+// 1		Start bit 
+// 2 - 9	Data bits
+// 10		Stop bit, out[8] update
+
+reg [ow-1:0] ob = 3;			// Oversample factor buffer
+reg [ow-1:0] osc = 0;			// Oversample state counter
+reg [ow-1:0] osb = 0;			// Oversample ones counter
+reg [7:0] oub = 0;			// Output buffer
+
+wire arb = (osb + in) > (ob >> 1);
+
+always @(posedge clk)
+begin
+	// Waiting for start bit
+	if (state == 0) begin
+		if (in == 0) begin
+			state <= state + 1;
+			ob <= o;
+			osc <= 1;
+			osb <= in;
+		end
+	end
+	
+	// Receiving start bit and checking its validity
+	if (state == 1) begin
+		osc <= osc + 1;
+		osb <= osb + in;
+		if (osc == ob-1) begin
+			if (~arb) begin
+				state <= state + 1;
+			end else begin
+				state <= 0;
+			end
+			osb <= 0;
+			osc <= 0;
+		end
+
+	end
+	
+	// Steadily advancing counters while receiving data bits
+	// Also saving incoming data
+	if (state > 1 && state < 10) begin
+		osc <= osc + 1;
+		osb <= osb + in;
+		if (osc == ob-1) begin
+			state <= state + 1;
+			oub[7] <= (arb);
+			oub[6:0] <= oub[7:1];
+			osb <= 0;
+			osc <= 0;
+		end
+	end
+
+	// While receiving stop bit, out is pushed and dr asserted 
+	// Stop part is cut short to 2 clock cycles in case receiver lags
+	// behind the transmitter.
+	if (state >= 10) begin
+		osc <= osc + 1;
+		if (osc == 0) out <= oub;
+		if (osc == 1) state <= 0;
+	end
+end
+
+// Data Ready
+always @ (negedge clk, posedge dr_rst)
+begin
+	if (dr_rst) dr <= 0;
+	else if (state >= 10 && osc == 1) dr <= 1;
+end
+endmodule
+
 // Unbuffered UART Receiver without oversampling
 // by Tomek Szczęsny 2024
 //
