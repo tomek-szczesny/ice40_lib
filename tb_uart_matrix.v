@@ -11,25 +11,27 @@ reg lut_cke;
 
 wire [7:0] tx;
 wire [2:0] tx_cke;
+wire clko;
 
 reg [0:49] rx0    = 50'b11111111111011001100111110010101011111111111111111;
 reg [0:49] rx1    = 50'b11111111111000110011111110101010101111111111111111;
-reg [0:49] lt_cke = 50'b00001110000000000000001000000000000000000000000000;
+reg [0:49] lt_cke = 50'b00001110000000000000000000010000000000000000000000;
 
 initial
 begin
 	lut_data <= 3'b101;
 	lut_addr <= 0;
-#2000	lut_data <= 3'b011;
+#1400	lut_data <= 3'b011;
 	lut_addr <= 1;
-#30000	$finish;
+#10000	$finish;
 end
 
 
 always
 begin
 	#100 clk <= ~clk;
-	$display("clk: %b, rx: %b, l_d: %b, l_a: %b, l_c: %b, tx: %b, tx_cke: %b", clk, rx, lut_data, lut_addr, lut_cke, tx, tx_cke);
+	$display("clk: %b, clko: %b, rx: %b, l_d: %b, l_a: %b, l_c: %b, tx: %b, tx_cke: %b, newdatas: %b, resets: %b",
+		  clk,     clko,     rx,  lut_data, lut_addr, lut_cke,  tx,     tx_cke, MUT.rx_newdata, MUT.rx_reset);
 end
 
 integer ict = 0;
@@ -41,14 +43,15 @@ begin
 #199	ict = ict + 1;
 end
 
-uart_matrix #(2, 3) MUT (
+uart_matrix #(2, 3, {3'b001, 3'b111}) MUT (
 	.clk(clk),
 	.rx(rx),
 	.lut_data(lut_data),
 	.lut_addr(lut_addr),
 	.lut_cke(lut_cke),
 	.tx(tx),
-	.tx_cke(tx_cke));
+	.tx_cke(tx_cke),
+	.clko(clko));
 
 endmodule
 
