@@ -63,7 +63,7 @@ parameter m = 8;
 parameter n = 8;
 
 reg [$clog2(m-1):0] inc = 0;	// Input counter for round-robin operation
-reg [n-1:0] lut [0:m-1] = 0;	// Matrix configuration LUT
+reg [n-1:0] lut [0:m-1] ;	// Matrix configuration LUT
 
 // Input data stream receivers, with a twist
 // Each must signal that new data is present.
@@ -73,18 +73,13 @@ wire [7:0]   rx_out [0:m-1];
 reg  [m-1:0] rx_reset;
 wire [m-1:0] rx_newdata;
 
-genvar i;
-generate
-	for (i=0; i<m; i=i+1) begin
-		uart_matrix_rx rx_core[i] (
-			.clk(clk),
-			.in(rx[i]),
-			.out(rx_out[i]),
-			.reset(rx_reset[i]),
-			.newdata(rx_newdata[i])
-		);
-	end
-endgenerate
+uart_matrix_rx rx_core [m-1:0] (
+	.clk(clk),
+	.in(rx),
+	.out(rx_out),
+	.reset(rx_reset),
+	.newdata(rx_newdata)
+);
 
 //////////////
 
@@ -117,7 +112,7 @@ endmodule
 module uart_matrix_rx (
 	input wire clk,
 	input wire in,
-	output wire [7:0] out = 0,
+	output wire [7:0] out,
 	input wire reset,
 	output reg newdata
 );
