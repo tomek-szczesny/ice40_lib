@@ -199,4 +199,62 @@ assign out = (seldiv == 1) ? ing : outb;
 
 endmodule
 
+//
+// A Programmable clock divider
+// compact version, without div1 handling or div ratio latch
+// by Tomek Szczesny 2024
+//
+// clkdiv_prog divides the frequency of the input clock signal by a selected
+// divider ratio.
+//
+// The divider ratio is selected with a binary number on div input.
+// The divider ratio is being read on each out posedge.
+// Glitches are limited but not completely avoided. No extra pulses will be
+// generated.
+//
+// The output signal duty cycle is as near 50% as possible (sometimes less).
+// In and out posedges are in sync.
+//
+// div == 0 causes out <= 0, effectively disabling the output.
+// div == 1 causes the gates of hell to open with an echoing squeak.
+//
+//
+//            +-----------------+
+//            |                 |
+//     in --->|  clkdiv_prog_l  |---> out
+// div[n] --->|                 |
+//            +-----------------+
+//
+// Parameters:
+// n		- div width in bits
+//
+// Ports: 
+// in		- Input
+// div[n-1:0]	- Divider ratio selection vector
+// out		- Output
+// reset 	- Asserted when div != latched div value
+//
+module clkdiv_prog_l(
+	input wire in,
+	input wire [n-1:0] div,
+	output reg out
+);
+parameter n = 4;
+
+reg [n-1:0] clkdiv = 1;		// Divider counter
+
+always@(posedge in)
+begin
+	if (clkdiv == 0) begin
+		out <= 1;
+		clkdiv <= div-1;
+	end 
+	else begin
+		clkdiv <= clkdiv - 1;
+		out <= ((clkdiv > (div >> 1)) && out);
+	end
+end
+
+endmodule
+
 `endif
