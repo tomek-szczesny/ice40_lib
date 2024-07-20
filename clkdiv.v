@@ -232,7 +232,6 @@ endmodule
 // in		- Input
 // div[n-1:0]	- Divider ratio selection vector
 // out		- Output
-// reset 	- Asserted when div != latched div value
 //
 module clkdiv_prog_l(
 	input wire in,
