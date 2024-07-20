@@ -244,13 +244,13 @@ reg [n-1:0] clkdiv = 1;		// Divider counter
 
 always@(posedge in)
 begin
-	if (clkdiv == 0) begin
+	if (clkdiv == 1) begin
 		out <= 1;
-		clkdiv <= div-1;
+		clkdiv <= div;
 	end 
 	else begin
 		clkdiv <= clkdiv - 1;
-		out <= ((clkdiv > (div >> 1)) && out);
+		out <= ((clkdiv-1 > (div >> 1)) && out);
 	end
 end
 

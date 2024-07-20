@@ -20,7 +20,7 @@ begin
 	div <= 2;
 #200
 	div <= 4;
-#80
+#100
 	div <= 0;
 #80 $finish;
 end
