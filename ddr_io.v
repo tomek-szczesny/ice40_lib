@@ -1,5 +1,5 @@
 // Dual Data Rate Input/Output library
-// by Tomek Szczęsny 2023
+// by Tomek Szczęsny 2023, 2024
 //
 // These modules initialize ice40 GPIOs to work in DDR mode.
 // Which means that input or output pin is triggered by both rising and
@@ -59,4 +59,72 @@ SB_IO #(
 
 endmodule
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+//
+// Single-ended DDR input 
+// Data is presented as a two-wire vector.
+// The values are updated on rising and falling edge of clk, respectively.
+//
+//                       +-------------------+
+//               clk --->|                   |
+//    (physical) pin --->|      ddr_in       |===> data[2] 
+//                       |                   |
+//                       +-------------------+
+//
+// Parameters:
+// None.
+//
+// Ports:
+// clk		- clock input
+// pin 		- Physical DDR input pin
+// data[2]	- Captured data
+//
+module ddr_in (
+	input wire clk,	
+	input wire pin,
+	output wire [1:0] data
+);
+
+// Physical input pin
+SB_IO #(
+    .PIN_TYPE(6'b0000_00)
+) ddr_io_sb_io (
+    .D_IN_0(data[0]),
+    .D_IN_1(data[1]),
+    .PACKAGE_PIN(pin),
+    .INPUT_CLK(clk)
+);
+
+endmodule
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+//
+// Single-ended DDR input, faked
+// This implementation does not use ice40 specific hardware.
+// It may be used for iverilog simulations.
+//
+//                       +-------------------+
+//               clk --->|                   |
+//    (physical) pin --->|    ddr_in_fake    |===> data[2] 
+//                       |                   |
+//                       +-------------------+
+//
+// Parameters:
+// None.
+//
+// Ports:
+// clk		- clock input
+// pin 		- Physical DDR input pin
+// data[2]	- Captured data
+//
+module ddr_in_fake (
+	input wire clk,	
+	input wire pin,
+	output reg [1:0] data
+);
+
+always @ (posedge clk) data[0] <= pin;
+always @ (negedge clk) data[1] <= pin;
+
+endmodule
 `endif

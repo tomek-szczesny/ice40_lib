@@ -458,4 +458,149 @@ begin
 end
 
 endmodule
+
+// Unbuffered UART Receiver
+// With physical DDR input
+// by Tomek Szczęsny 2024
+//
+// Receives data in 8n1 format, at any clock rate.
+// Performs user defined oversample (at least 4x, must be even).
+// Theoretically should handle 2.5% clk frequency mismatch between tx and rx.
+//
+//             +------------------+
+//      in --->|                  |===> out[8]
+//             |    uart_rx_ddr   |
+//     clk --->|                  |---> clk_out
+//             +------------------+
+//
+// Parameters: 
+// o		- Oversampling factor, o > 3, must be divisible by 2
+//
+// Ports:
+// clk		- a receiver clock input. Must be close to "o" * data rate.
+// in		- UART input, must be a physical pin
+// out[8] 	- 1-byte wide output register with received data
+// clk_out	- Sends short positive pulse when out[8] is updated
+//
+//
+`include "ddr_io.v"
+
+module uart_rx_ddr(
+	input wire clk,
+	input wire in,
+	output reg [7:0] out = 0,
+	output reg clk_out = 0
+
+);
+
+parameter o = 4;
+localparam oh = o/2;
+
+// Input buffer for a single bit
+// Has room for one extra bit to introduce offset if necessary
+reg [o:0] ib = -1;	// initialized as all ones
+
+// Offset - introduced if start bit was detected on clk negedge
+reg offset = 0;
+
+// Physical pin instantiation
+wire [1:0] i;
+ddr_in ddr_in_inst (clk, in, i);
+
+// Capture data
+always @ (negedge clk)
+begin
+	ib[1:0] <= i;
+	ib[o:2] <= ib[o-2:0];
+end
+
+reg [3:0] state = 0;		// Receiver machine state
+// 0		Idle
+// 1		Start bit 
+// 2 - 9	Data bits
+// 10		Stop bit, out[8] update
+
+
+
+reg [$clog2(oh)-1:0] osc = 0;		// Oversample state counter
+reg [6:0] oub = 0;			// Output buffer
+
+// Arbiter
+integer ii;
+integer ij;
+reg arb;
+always @ (ib, offset)
+begin
+	ij = 0;
+	for (ii=0; ii<o; ii=ii+1)
+	begin
+		ij = ij + ib[ii+offset];
+	end
+	arb = (ij > oh); 
+end
+
+always @(posedge clk)
+begin
+
+	// Waiting for start bit
+	if (state == 0) begin
+		clk_out <= 0;
+		if (ib[1:0] != 2'b11) begin
+			state <= state + 1;
+			osc[0] <= ~(ib[1:0] == 2'b10);	// we need an extra clock cycle
+			offset <= (ib[1:0] == 2'b10);	// if offset is introduced
+		end
+	end
+	
+	// Receiving start bit and checking its validity
+	if (state == 1) begin
+		if (osc == oh-1) begin
+			if (~arb) begin
+				state <= state + 1;
+			end else begin
+				state <= 0;
+			end
+			osc <= 0;
+		end else begin
+			osc <= osc + 1;
+		end
+
+	end
+	
+	// Steadily advancing counters while receiving data bits
+	// Also saving incoming data
+	if (state > 1 && state < 9) begin
+		osc <= osc + 1;
+		if (osc == oh-1) begin
+			state <= state + 1;
+			oub[6] <= (arb);
+			oub[5:0] <= oub[6:1];
+			osc <= 0;
+		end
+	end
+
+	// The last bit is being received
+	if (state == 9) begin
+		osc <= osc + 1;
+		if (osc == oh-1) begin
+			state <= state + 1;
+			out[7] <= (arb);
+			out[6:0] <= oub[6:0];
+			osc <= 0;
+		end
+	end
+
+	// While receiving stop bit, out is already pushed,
+	// so clk_out signals that data is ready.
+	// Stop part is cut short to 1 clock cycle in case receiver lags
+	// behind the transmitter.
+	if (state >= 10) begin
+		clk_out <= 1;
+		state <= 0;
+		offset <= 0;
+	end
+
+end
+
+endmodule
 `endif
