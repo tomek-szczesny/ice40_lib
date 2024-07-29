@@ -148,7 +148,6 @@ begin
 		state <= state + 1;
 	end
 	if (state > 8) begin
-		out <= 1;
 		state <= 0;
 	end
 end
