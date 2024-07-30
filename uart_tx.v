@@ -116,7 +116,6 @@ module uart_tx_l(
 	output reg out
 );
 initial out <= 1;
-initial fetch <= 0;
 
 reg [3:0] state;		// Transmitter machine state
 // 0      Start bit, latch data
@@ -124,17 +123,18 @@ reg [3:0] state;		// Transmitter machine state
 // 2 - 8  Sending the remaining bits of data
 // 9 	  Stop bit
 
-reg dr[1:0] = 0;
-always @ (posedge data_rdy) dr[0] <= ~dr[0];
+reg dr0 = 0;
+reg dr1 = 0;
+always @ (posedge data_rdy) dr0 <= ~dr0;
 wire drr;
-assign drr = (dr[0] != dr[1]);
+assign drr = (dr0 != dr1);
 
 reg [7:0] int_buf;
 
 always @(posedge clk)
 begin
 	if (state == 0 && drr) begin
-		dr[1] <= ~dr[1];
+		dr1 <= ~dr1;
 		out <= 0;
 		state <= state + 1;
 		int_buf[7:0] <= data[7:0];
