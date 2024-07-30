@@ -24,21 +24,20 @@
 
 module clkdiv(
 	input wire in,
-	output reg out = 0
+	output reg out
 );
 parameter divider = 2;
 
-reg [$clog2(divider-1):0] clkdiv = 0;
+reg [$clog2(divider)-1:0] clkdiv = 0;
 
 always@(posedge in)
 begin
-	if (clkdiv >= (divider - 1)) begin
-		clkdiv <= 0;
-		out <= 1;
+	if (clkdiv == 0) begin
+		clkdiv <= divider - 1;
 	end else begin
-		clkdiv <= clkdiv + 1;
-		out <= (clkdiv + 1 < (divider/2));
+		clkdiv <= clkdiv - 1;
 	end
+	out <= clkdiv < (divider/2);
 end
 
 endmodule
