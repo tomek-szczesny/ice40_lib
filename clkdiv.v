@@ -200,7 +200,7 @@ endmodule
 
 //
 // A Programmable clock divider
-// compact version, without div1 handling or div ratio latch
+// compact version, without div1 handling
 // by Tomek Szczesny 2024
 //
 // clkdiv_prog divides the frequency of the input clock signal by a selected
@@ -208,13 +208,13 @@ endmodule
 //
 // The divider ratio is selected with a binary number on div input.
 // The divider ratio is being read on each out posedge.
-// Glitches are limited but not completely avoided. No extra pulses will be
-// generated.
+// Glitches are avoided, but sometimes it may have to cycle through the full
+// capacity of 'div' input.
 //
-// The output signal duty cycle is as near 50% as possible (sometimes less).
+// The output signal duty cycle is as near 50% as possible (sometimes more).
 // In and out posedges are in sync.
 //
-// div == 0 causes out <= 0, effectively disabling the output.
+// div == 0 causes out <= 1, effectively disabling the output.
 // div == 1 causes the gates of hell to open with an echoing squeak.
 //
 //
@@ -237,19 +237,21 @@ module clkdiv_prog_l(
 	input wire [n-1:0] div,
 	output reg out
 );
-parameter n = 4;
+parameter n = 11;
 
 reg [n-1:0] clkdiv = 1;		// Divider counter
+wire [n-1:0] clkdivm1;
+assign clkdivm1 = clkdiv - 1;
 
 always@(posedge in)
 begin
 	if (clkdiv == 1) begin
-		out <= 1;
 		clkdiv <= div;
-	end 
+		out <= 1;
+	end
 	else begin
-		clkdiv <= clkdiv - 1;
-		out <= ((clkdiv-1 > (div >> 1)) && out);
+		clkdiv <= clkdivm1;
+		if (clkdivm1 == div[n-1:1]) out <= 0;
 	end
 end
 
