@@ -159,67 +159,6 @@ assign out = pe && (ne[2] || ~sel);
 endmodule
 
 //
-// Maximally optimized programmable divider
-// by powers of 2, up to 128
-// by Tomek Szczesny 2024
-//
-// clkdiv_2n divides the frequency of input clock signal by a power of 2,
-// in range 2-128.
-// Setting divisor below 2 results in division by 2.
-//
-// This divider must be reset to transition without a glitch.
-// If glitches are acceptable, reset is not necessary.
-// The output signal duty cycle is at 50%.
-// In and out posedges are in sync.
-//
-//     d2 --->+----------------+
-//     d4 --->|                |
-//    d16 --->|   clkdiv_2n    |---> out
-//     in --->|                |
-//    rst --->+----------------+
-//
-// Parameters:
-// None.
-//
-// Ports: 
-// d2	- Adds one division by 2 to the total divisor
-// d4	- Adds one division by 4 to the total divisor
-// d16	- Adds one division by 16 to the total divisor
-// in	- Input
-// out	- Output
-// rst	- Active high synchronous reset
-//
-/*
-function carry (input a, b, c);
-	carry = (a&&b) || (a&&c) || (b&&c);	// 0 + młodsze carry + młodszy bit
-endfunction
-
-module clkdiv_2n(
-	input wire d2,
-	input wire d4,
-	input wire d16,
-	input wire rst,
-	input wire in,
-	output wire out
-);
-
-reg [6:0] div = 0;
-assign out = div[6];
-
-always@(posedge in)
-begin
-	if (rst) div <= 0;
-	else begin
-		div[3:0] <= div[3:0] + 1;
-		div[4] <= carry (0, div[3], &div[2:0]);
-		div[6] <= div[4];
-	end
-end
-
-endmodule
-*/
-
-//
 // A Programmable clock divider
 // by Tomek Szczesny 2024
 //
