@@ -34,7 +34,7 @@ endmodule
 
 //////////
 
-module SB_DFFR(output reg Q, input wire C, input wire D, input wire R);
+module SB_DFFR(output reg Q = 0, input wire C, input wire D, input wire R);
 always@(posedge C, posedge R)
 begin
 	if (R) Q <= 0;
@@ -42,7 +42,7 @@ begin
 end
 endmodule
 
-module SB_DFFS(output reg Q, input wire C, input wire D, input wire S);
+module SB_DFFS(output reg Q = 0, input wire C, input wire D, input wire S);
 always@(posedge C, posedge S)
 begin
 	if (S) Q <= 1;
@@ -50,21 +50,21 @@ begin
 end
 endmodule
 
-module SB_DFFSS(output reg Q, input wire C, input wire D, input wire S);
+module SB_DFFSS(output reg Q = 0, input wire C, input wire D, input wire S);
 always@(posedge C)
 begin
 	Q <= S ? 1 : D;
 end
 endmodule
 
-module SB_DFFSR(output reg Q, input wire C, input wire D, input wire R);
+module SB_DFFSR(output reg Q = 0, input wire C, input wire D, input wire R);
 always@(posedge C)
 begin
 	Q <= R ? 0 : D;
 end
 endmodule
 
-module SB_DFFER(output reg Q, input wire C, input wire E, input wire D, input wire R);
+module SB_DFFER(output reg Q = 0, input wire C, input wire E, input wire D, input wire R);
 always@(posedge C, posedge R)
 begin
 	if (R) Q <= 0;
@@ -72,7 +72,7 @@ begin
 end
 endmodule
 
-module SB_DFFES(output reg Q, input wire C, input wire E, input wire D, input wire S);
+module SB_DFFES(output reg Q = 0, input wire C, input wire E, input wire D, input wire S);
 always@(posedge C, posedge S)
 begin
 	if (S) Q <= 1;
@@ -80,14 +80,14 @@ begin
 end
 endmodule
 
-module SB_DFFESS(output reg Q, input wire C, input wire E, input wire D, input wire S);
+module SB_DFFESS(output reg Q = 0, input wire C, input wire E, input wire D, input wire S);
 always@(posedge C)
 begin
 	if (E) Q <= S ? 1 : D;
 end
 endmodule
 
-module SB_DFFESR(output reg Q, input wire C, input wire E, input wire D, input wire R);
+module SB_DFFESR(output reg Q = 0, input wire C, input wire E, input wire D, input wire R);
 always@(posedge C)
 begin
 	if (E) Q <= R ? 0 : D;
