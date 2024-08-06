@@ -55,7 +55,7 @@ module data_matrix (
 	input wire [m-1:0] rx_rdy,
 	input wire [n*m-1:0] lut,
 	output reg [o-1:0] tx,
-	output wire [n-1:0] tx_cke
+	output reg [n-1:0] tx_cke
 );
 
 parameter m = 8;
