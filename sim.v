@@ -64,6 +64,13 @@ begin
 end
 endmodule
 
+module SB_DFFE(output reg Q = 0, input wire C, input wire E, input wire D);
+always@(posedge C)
+begin
+	if (E) Q <= D;
+end
+endmodule
+
 module SB_DFFER(output reg Q = 0, input wire C, input wire E, input wire D, input wire R);
 always@(posedge C, posedge R)
 begin
