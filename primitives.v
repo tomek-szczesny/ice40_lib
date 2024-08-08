@@ -33,8 +33,6 @@
 // rs			- Reset State (0)
 // sync			- Synchronous(1) or asynchronous(0) reset (1)
 //
-// Ports: 
-//
 // Notes:
 // 1. In hardware, 'cin' can only be either 0, 1 or cout from another cell.
 // However Yosys know its ways of sacrificing another cell to route any signal
@@ -79,6 +77,7 @@ SB_LUT4 lut (
 	.I2(in2),
 	.I3(cin)
 );
+defparam lut.LUT_INIT = lut_init;
 
 case ({rs, sync})
 	2'b00: SB_DFFER  dff (.Q(out), .C(clk), .E(cke), .D(lo), .R(rst));
@@ -87,9 +86,25 @@ case ({rs, sync})
 	2'b11: SB_DFFESS dff (.Q(out), .C(clk), .E(cke), .D(lo), .S(rst));
 endcase
 
-
-defparam lut.LUT_INIT = lut_init;
-
 endmodule
 
+//
+// Check for the equality of two vectors
+// by Tomek Szczesny 2024
+//
+// Parameters:
+// n			- bit width of inputs
+//
+
+module eq(
+	input wire [n-1:0] in1,
+	input wire [n-1:0] in2,
+	output wire out
+);
+
+parameter n = 10;
+
+assign out = &(in1~^in2);
+
+endmodule
 `endif
