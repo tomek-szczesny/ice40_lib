@@ -8,24 +8,22 @@ module ctr_pr4(
 	output reg [n-1:0] out = 0);
 
 localparam n = 4;
-localparam lut_data = 16'b0100101100101001;
+localparam lut_data = 16'b0000001011111101;
 
 wire lo;
-reg msb = 0;
 
 SB_LUT4 lut (
 	.O(lo),
 	.I0(out[0]),
 	.I1(out[1]),
-	.I2(out[3]),
-	.I3(msb)
+	.I2(out[2]),
+	.I3(out[3])
 );
 defparam lut.LUT_INIT = lut_data;
 
 always @ (posedge clk)
 begin
 	if (inc) begin
-		msb <= out[n-1];
 		out [n-1:1] <= out[n-2:0];
 		out[0] <= lo;
 	end
