@@ -108,34 +108,4 @@ assign out = &(in1~^in2);
 
 endmodule
 
-module ctr_pr(
-	input wire clk,
-	input wire inc,
-	output reg [n-1:0] out = 0);
-
-parameter n = 8;
-parameter lut_data = 16'b1100011011010101;
-
-wire lo;
-
-SB_LUT4 #(lut_data) lut (
-	.O(lo),
-	.I0(out[0]),
-	.I1(out[1]),
-	.I2(out[n-2]),
-	.I3(out[n-1])
-);
-
-always @ (posedge clk)
-begin
-	if (inc) begin
-		out [n-1:1] <= out[n-2:0];
-		out[0] <= lo;
-	end
-end
-
-endmodule
-
-
-
 `endif
