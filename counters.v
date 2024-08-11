@@ -1,7 +1,7 @@
 `ifndef _counters_v_
 `define _counters_v_
 
-///////
+////////////////////////////////////////////////////////////////////////////////
 module ctr_pr4(
 	input wire clk,
 	input wire inc,
@@ -30,8 +30,8 @@ begin
 end
 
 endmodule
-//
-///////
+
+////////////////////////////////////////////////////////////////////////////////
 module ctr_pr5(
 	input wire clk,
 	input wire inc,
@@ -63,7 +63,46 @@ end
 
 endmodule
 
-///////
+////////////////////////////////////////////////////////////////////////////////
+module ctr_pr6(
+	input wire clk,
+	input wire inc,
+	output reg [n-1:0] out = 0);
+
+localparam n = 6;
+localparam lut_data1 = 16'b0000111100101101;
+localparam lut_data2 = 16'b0000111100101101;
+
+wire lo1, lo2;
+
+SB_LUT4 lut1 (
+	.O(lo1),
+	.I0(out[0]),
+	.I1(out[1]),
+	.I2(out[2]),
+	.I3(out[4])
+);
+SB_LUT4 lut2 (
+	.O(lo2),
+	.I0(out[2]),
+	.I1(out[3]),
+	.I2(out[5]),
+	.I3(lo1)
+);
+defparam lut1.LUT_INIT = lut_data1;
+defparam lut2.LUT_INIT = lut_data2;
+
+always @ (posedge clk)
+begin
+	if (inc) begin
+		out [n-1:1] <= out[n-2:0];
+		out[0] <= lo2;
+	end
+end
+
+endmodule
+
+////////////////////////////////////////////////////////////////////////////////
 module ctr_pr7(
 	input wire clk,
 	input wire inc,
