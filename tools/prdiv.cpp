@@ -248,6 +248,27 @@ int main(int argc, char** argv)
 	
 	std::cout << ">>> Single LUT solutions depleted. Adding Secondary LUT.\n";
 	std::cout << ">>> Trying two LUTs with the same data.\n";
+	std::cout << ">>> Assuming that each LUT contains exactly eight 1's.\n";
+	for (i=0; i<=sx; i++)
+	{
+		x = i;
+		config1 = 1;
+		config2 = 1;
+		if (i > 0) config1 = 1 << b+i-1;
+
+		while (config2 < nextconfig(config2, 1))
+		{
+			config2 = nextconfig(config2, 1);
+			config1 = 1;
+			while (config1 < nextconfig(config1))
+			{
+				config1 = nextconfig(config1);
+				if (testloop(1, config1, config2, 8, 8)) return 0;
+			}
+		}
+	}
+	std::cout << ">>> Trying two LUTs with the same data.\n";
+	std::cout << ">>> Broadening search to any LUT values.\n";
 	for (i=0; i<=sx; i++)
 	{
 		x = i;
@@ -282,7 +303,7 @@ int main(int argc, char** argv)
 			while (config1 < nextconfig(config1))
 			{
 				config1 = nextconfig(config1);
-				if (testloop(2, config1, config2, 6, 6)) return 0;
+				if (testloop(2, config1, config2, 0, 0)) return 0;
 			}
 		}
 	}
