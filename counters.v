@@ -135,4 +135,46 @@ end
 endmodule
 
 
+////////////////////////////////////////////////////////////////////////////////
+module ctr_pr8(
+	input wire clk,
+	input wire inc,
+	output reg [n-1:0] out = 0);
+
+localparam n = 8;
+localparam lut_data1 = 16'b0100101111000011;
+localparam lut_data2 = 16'b0100101111000011;
+
+wire lo1, lo2;
+reg msb = 1'b0;
+
+SB_LUT4 lut1 (
+	.O(lo1),
+	.I0(out[0]),
+	.I1(out[1]),
+	.I2(out[4]),
+	.I3(msb)
+);
+SB_LUT4 lut2 (
+	.O(lo2),
+	.I0(out[1]),
+	.I1(out[4]),
+	.I2(out[7]),
+	.I3(lo1)
+);
+defparam lut1.LUT_INIT = lut_data1;
+defparam lut2.LUT_INIT = lut_data2;
+
+always @ (posedge clk)
+begin
+	if (inc) begin
+		msb <= out[n-1];
+		out [n-1:1] <= out[n-2:0];
+		out[0] <= lo2;
+	end
+end
+
+endmodule
+
+
 `endif
