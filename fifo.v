@@ -111,7 +111,7 @@ begin
 end
 
 endmodule
-
+//
 // General purpose FIFO buffer with clock enable signals
 // by Tomek Szczęsny 2024
 //
@@ -214,6 +214,110 @@ begin
 end
 
 endmodule
+
+// Specific, optimized FIFO buffer with clock enable signals
+// by Tomek Szczęsny 2024
+//
+// A modified fifo_cke with 8-bit words and 512 items.
+// Optimized for speed thanks to pseudo-random counters without carry.
+//
+// There are only two status bits, "full" and "empty". See ports list.
+//
+//             +------------------+
+//     clk --->|                  |<--- clk_o
+//     cke --->|                  |<--- cke_o    
+// data[n] ===>|     fifo_8       |===> data_o[n]
+//             |                  |
+//             |                  |===> status[2]
+//             +------------------+
+//                             
+//
+// Local Parameters (fixed): 
+//
+// n - bit width of a buffer = 8
+// m - buffer depth = 512
+//
+// Ports:
+// clk		- a clock input. Posedge stores "data[n]".
+// cke		- Clock Enable for clk
+// data[n] 	- Data input fetched at each "clk" posedge.
+// clk_o	- Discards the oldest data on posedge (thus updates "data_o")
+// cke_o	- Clock Enable for clk_o
+// data_o[n]	- An output exposing the oldest data stored in FIFO
+// status[2]	- Buffer status output:
+// 			00 - Buffer empty (output invalid)
+// 			01 - Buffer not full
+// 			11 - Buffer full
+//
+
+`include "counters.v"
+`include "primitives.v"
+module fifo_8(
+	input wire clk,
+	input wire cke,
+	input wire clk_o,
+	input wire cke_o,
+	input wire[n-1:0] data,
+	output reg[n-1:0] data_o,
+	output reg[1:0] status
+);
+localparam n = 8;
+localparam m = 512;
+
+localparam w = $clog2(m);
+
+// buf_t points at the next free cell
+// buf_b points at the oldest data cell
+// Both have one bit wider versions so buf_lvl actually can count up to "m".
+// As a result, MSB of buf_lvl indicates full buffer.
+
+ctr_pr9 top_ctr (clk,   (cke   && ~status[1]), buf_t);
+ctr_pr9 bot_ctr (clk_o, (cke_o &&  status[0]), buf_b);
+
+reg buf_t_m = 0;		// additional MSBs of buffers
+reg buf_b_m = 0;		// In order to determine a difference between
+				// full and empty buffer
+
+always @ (clk  ) if (cke   && buf_t==0 && ~status[1]) buf_t_m = ~buf_t_m;
+always @ (clk_o) if (cke_o && buf_b==0 &&  status[0]) buf_b_m = ~buf_b_m;
+
+wire beq;
+eq #(9) top_bot (buf_t, buf_b, beq);
+
+wire beq_m;
+assign beq_m = buf_t_m ~^ buf_b_m;
+
+wire [w-1:0] buf_t;
+wire [w-1:0] buf_b;
+
+reg [n-1:0] fifo_buf [0:m-1];
+
+// Status output
+always@*
+begin
+	status[0]   <= ~(beq && beq_m);
+	status[1]   <= (beq && ~beq_m);
+end
+
+// Data input
+always @(posedge clk)
+begin
+	if(~status[1] && cke) begin
+		fifo_buf[buf_t] <= data;
+	end
+end
+
+// Data output
+always @(posedge clk_o)
+begin
+	if (status[0] && cke_o)
+	begin
+		data_o <= fifo_buf[buf_b];
+	end
+end
+
+endmodule
+
 // General purpose FIFO buffers
 // by Tomek Szczęsny 2024
 //
