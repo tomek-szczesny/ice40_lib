@@ -277,10 +277,6 @@ ctr_pr9 bot_ctr (clk_o, (cke_o &&  status[0]), buf_b);
 reg buf_t_m = 0;		// additional MSBs of buffers
 reg buf_b_m = 0;		// In order to determine a difference between
 				// full and empty buffer
-
-always @ (clk  ) if (cke   && buf_t==0 && ~status[1]) buf_t_m = ~buf_t_m;
-always @ (clk_o) if (cke_o && buf_b==0 &&  status[0]) buf_b_m = ~buf_b_m;
-
 wire beq;
 eq #(9) top_bot (buf_t, buf_b, beq);
 
@@ -304,6 +300,7 @@ always @(posedge clk)
 begin
 	if(~status[1] && cke) begin
 		fifo_buf[buf_t] <= data;
+		if (buf_t == 0) buf_t_m <= ~buf_t_m;
 	end
 end
 
@@ -313,6 +310,7 @@ begin
 	if (status[0] && cke_o)
 	begin
 		data_o <= fifo_buf[buf_b];
+		if (buf_b == 0) buf_b_m <= ~buf_b_m;
 	end
 end
 
