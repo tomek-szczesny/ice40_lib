@@ -64,7 +64,7 @@ void printmodule(int reactor1, int reactor2, int config1, int config2, int mode)
 	std::cout << "module ctr_pr" << p << "(input wire clk, input wire inc, output reg [" << b-1 << ":0] out = 0);\n";
 
 	std::cout << "localparam lut1_data = 16'b" << bincout(reactor1,16) << ";\n";
-	if (config2) std::cout << "localparam lut2_data = 16'b" << bincout(reactor1,16) << ";\n";
+	if (config2) std::cout << "localparam lut2_data = 16'b" << bincout(reactor2,16) << ";\n";
 
 	std::cout << "wire lo1;";
 	if (config2) std::cout << " wire lo2;"; std::cout << "\n";
