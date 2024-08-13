@@ -1,4 +1,4 @@
-// Pseudo random counter
+// Pseudo random divider 
 // LUT configuration finder
 // and Verilog module generator
 // by Tomek Szczęsny 2024
@@ -20,7 +20,7 @@ int sx = 3;		// Max extra bits  (cmd line arg)
 //const int t = b + x - 1;
 int max = pow(2,b);
 
-std::vector<int> results(20480);
+std::vector<bool> results(20480);
 int x = 0;	// Extra bits
 
 inline std::string bincout (int in, int w = 32)
@@ -52,8 +52,7 @@ std::vector<std::string> parseconfig_s(int config)
 	int i;
 	for (i=0;i<confv.size();i++)
 	{
-		if (confv.at(i) < b) rets.push_back("out[" + std::to_string(confv[i]) + "]");
-		else rets.push_back("msb[" + std::to_string(confv[i]-b) + "]");
+		rets.push_back("s[" + std::to_string(confv[i]) + "]");
 	}
 	return rets;
 }
@@ -61,14 +60,14 @@ std::vector<std::string> parseconfig_s(int config)
 void printmodule(int reactor1, int reactor2, int config1, int config2, int mode)
 {
 	std::cout << "\n";
-	std::cout << "module ctr_pr" << p << "(input wire clk, input wire inc, output reg [" << b-1 << ":0] out = 0);\n";
+	std::cout << "module div_pr" << p << "(input wire clk, input wire rst, output wire out);\n";
 
 	std::cout << "localparam lut1_data = 16'b" << bincout(reactor1,16) << ";\n";
 	if (config2) std::cout << "localparam lut2_data = 16'b" << bincout(reactor2,16) << ";\n";
 
-	std::cout << "wire lo1;";
-	if (config2) std::cout << " wire lo2;"; std::cout << "\n";
-	if (x) std::cout << "reg [" << x-1 << ":0] msb = 0;\n";
+	std::cout << "wire lo1, lo2;\n";
+	std::cout << "reg [" << x+b-1 << ":0] s = 0;\n";
+	std::cout << "assign out = s[" << x+b-1 << "];\n";
 
 	std::vector<std::string> pcs = parseconfig_s(config1);
 	std::cout << "SB_LUT4 lut1 (.O(lo1), .I0(" << pcs.at(0);
@@ -79,20 +78,20 @@ void printmodule(int reactor1, int reactor2, int config1, int config2, int mode)
 	if (mode) {
 		pcs = parseconfig_s(config2);
 		std::cout << "SB_LUT4 lut2 (.O(lo2), .I0(" << pcs.at(0);
-		std::cout << "), .I1(" << pcs.at(1) << "), .I2(" << pcs.at(2) << "), .I3(lo1));\n";
+		std::cout << "), .I1(" << pcs.at(1) << "), .I2(";
+		std::cout << pcs.at(2) << "), .I3(" << pcs.at(3) << "));\n";
 		std::cout << "defparam lut2.LUT_INIT = lut2_data;\n";
 	}
 
 	std::cout << "always @ (posedge clk) begin\n";	
-	std::cout << "\tif (inc) begin\n";	
-	if (x == 1)  std::cout << "\t\tmsb <= out[" << b-1 << "];\n";	
-	if (x >= 2)  std::cout << "\t\tmsb <= {msb[" << x-2 << ":0], out[" << b-1 << "]};\n";
-	             std::cout << "\t\tout[" << b-1 << ":1] <= out[" << b-2 << ":0];\n";
-	if (config2) std::cout << "\t\tout[0] <= lo2;\n";
-	else         std::cout << "\t\tout[0] <= lo1;\n";
-	             std::cout << "\tend\n";
-	             std::cout << "end\n";
-	             std::cout << "endmodule\n";
+	std::cout << "\tif (rst) s <= 0;\n";	
+	std::cout << "\telse begin\n";	
+	std::cout << "\t\ts[" << b+x-1 << "] <= lo2;\n";
+	std::cout << "\t\ts[" << b+x-2 << ":1] <= s[" << b+x-3 << ":0];\n";
+	std::cout << "\t\ts[0] <= lo1;\n";
+	std::cout << "\tend\n";
+	std::cout << "end\n";
+	std::cout << "endmodule\n";
 }
 
 int nextconfig (int i, bool s = 0)
@@ -170,32 +169,11 @@ int eval(bool reset, long int data, int config1, int config2)
 		}
 		else k++;
 	}
-	in2 += lut(in1, data % int(pow(2,16))) << 3;
 	d = d << 1;
-	d = d & int(pow(2,b+x)-1);
-	if (config2 == 0) d += lut(in1, data % int(pow(2,16)));
-	//if (lut(in2, data >> 16)) d = 0;
-	else d += lut(in2, (data >> 16));
+	d = d & int(pow(2,b+x-1)-2);
+	d += lut(in1, data % int(pow(2,16)));
+	d += (lut(in2, (data >> 16)) << (b+x-1));
 	return d;
-}
-
-bool check(int num)
-{
-	int i, j;
-	for (i=0;i<num;i++)		// Check for period "num"
-	{
-		if (results[i] != results[i+num]) return 0;
-	}
-					// Check all states for uniqueness 
-	for (i=0;i<num-1;i++)
-	{
-		for (j=i+1;j<num;j++)
-		{
-			if (results[j] == results[i]) return 0;
-		}
-	}
-
-	return 1;
 }
 
 bool testloop(int mode , int config1, int config2, int mode1, int mode2)	// Returns 1 if succeeded
@@ -223,22 +201,12 @@ bool testloop(int mode , int config1, int config2, int mode1, int mode2)	// Retu
 			reactor2 = nextreactor(reactor2,mode2);
 		}
 		i = reactor1 + (reactor2 << 16);
-		//std::cout << reactor1 << " " << reactor2 << "\n";
 
-		results[0] = eval (1, 0, 0, 0); // reset
-		for (j=1; j<2*p; j++)
+		eval (1, 0, 0, 0); // reset
+		for (j=1; j<2*p; j++)				// This is the validity check
 		{
-			results[j] = eval(0, i, config1, config2) & (max-1);
-			if (j > 0 && results[j] == results[j-1]) goto next;
+			if (((eval(0, i, config1, config2) >> b+x-1) & 1) != ((j%p)>=(p/2))) goto next;
 		}
-		if (!check(p)) continue;
-		for (j=0; j<2*p; j++)
-		{
-			results[j] = eval(0, i, config1, config2) & (max-1);
-			if (j > 0 && results[j] == results[j-1]) goto next;
-		}
-		if (!check(p)) continue;
-		
 		// At this point check had succeeded.
 		std::cout << "//// Found something!!\n";
 		std::cout << "//// Reactor1: " << bincout(reactor1,16);
@@ -250,8 +218,8 @@ bool testloop(int mode , int config1, int config2, int mode1, int mode2)	// Retu
 		std::cout << "//// Output: " << j % max;
 		for (k=0; k<2*p+2; k++)
 		{
-			j = eval(0, i, config1, config2) & (max-1); 
-			std::cout << ", " << j % max;
+			j = eval(0, i, config1, config2); 
+			std::cout << ", " << j;
 		}
 		printmodule(reactor1, reactor2, config1, config2, mode);
 		std::cout << "\n//// (BEL character) \a\n"; 		// BEL
@@ -281,28 +249,9 @@ int main(int argc, char** argv)
 	int config1 = 0;
 	int config2 = 0;
 
-	std::cout << "//// >>> Looking for a counter with period " << p << ".\n";
-	
-	
-	//config1 = nextconfig(config1);
-	//config2 = nextconfig(config2);
-	
 	int i;
-	for (i=0; i<=sx; i++)
-	{
-		x = i;
-		config1 = 1 << (b+x-1);
-		while (config1 < nextconfig(config1))
-		{
-			config1 = nextconfig(config1);
-			if (testloop(0, config1, config2, 0, 0)) return 0;
-	 	}
-	}
-		//config1 = nextconfig(config1);
-	
-	std::cout << "////>>> Single LUT solutions depleted. Adding Secondary LUT.\n";
 	std::cout << "////>>> Trying two LUTs with the same data.\n";
-	std::cout << "////>>> Assuming that each LUT contains exactly eight 1's.\n";
+	std::cout << "////>>> Any LUT values.\n";
 	for (i=0; i<=sx; i++)
 	{
 		x = i;
@@ -310,29 +259,9 @@ int main(int argc, char** argv)
 		config2 = 1;
 		if (i > 0) config1 = 1 << b+i-1;
 
-		while (config2 < nextconfig(config2, 1))
+		while (config2 < nextconfig(config2, 0))
 		{
-			config2 = nextconfig(config2, 1);
-			config1 = 1;
-			while (config1 < nextconfig(config1))
-			{
-				config1 = nextconfig(config1);
-				if (testloop(1, config1, config2, 8, 8)) return 0;
-			}
-		}
-	}
-	std::cout << "////>>> Trying two LUTs with the same data.\n";
-	std::cout << "////>>> Broadening search to any LUT values.\n";
-	for (i=0; i<=sx; i++)
-	{
-		x = i;
-		config1 = 1;
-		config2 = 1;
-		if (i > 0) config1 = 1 << b+i-1;
-
-		while (config2 < nextconfig(config2, 1))
-		{
-			config2 = nextconfig(config2, 1);
+			config2 = nextconfig(config2, 0);
 			config1 = 1;
 			while (config1 < nextconfig(config1))
 			{
@@ -350,9 +279,9 @@ int main(int argc, char** argv)
 		config2 = 1;
 		if (i > 0) config1 = 1 << b+i-1;
 
-		while (config2 < nextconfig(config2, 1))
+		while (config2 < nextconfig(config2, 0))
 		{
-			config2 = nextconfig(config2, 1);
+			config2 = nextconfig(config2, 0);
 			config1 = 1;
 			while (config1 < nextconfig(config1))
 			{
