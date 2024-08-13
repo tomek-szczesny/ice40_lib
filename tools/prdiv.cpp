@@ -250,28 +250,7 @@ int main(int argc, char** argv)
 	int config2 = 0;
 
 	int i;
-	std::cout << "////>>> Trying two LUTs with the same data.\n";
-	std::cout << "////>>> Any LUT values.\n";
-	for (i=0; i<=sx; i++)
-	{
-		x = i;
-		config1 = 1;
-		config2 = 1;
-		if (i > 0) config1 = 1 << b+i-1;
-
-		while (config2 < nextconfig(config2, 0))
-		{
-			config2 = nextconfig(config2, 0);
-			config1 = 1;
-			while (config1 < nextconfig(config1))
-			{
-				config1 = nextconfig(config1);
-				if (testloop(1, config1, config2, 0, 0)) return 0;
-			}
-		}
-	}
 	std::cout << "////>>> Brute forcing all possible LUT data combinations.\n";
-	std::cout << "////>>> This will take a while, lol...\n";
 	for (i=0; i<=sx; i++)
 	{
 		x = i;
