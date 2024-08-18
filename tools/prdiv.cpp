@@ -37,50 +37,44 @@ class lut {
 	// It supports "don't care" states to some extent
 	
 	private:
-		std::vector<bool> lut_d;//(16, 0);
-		std::vector<bool> lut_x;//(16, 1);
+		const int max = std::pow(2,16)-1;
+		int lut_d = 0;
+		int lut_x = max;
 	
 	public:
 	lut()
 	{
-		int i;
-		for (i=0;i<16;i++)
-		{
-			lut_d.push_back(0);
-			lut_x.push_back(1);
-		}
+		lut_d = 0;
+		lut_x = max;
 	}
 	// reading
 	bool operator[](int i) const
 	{
-		return lut_d[i];
+		return ((lut_d >> i) & 1);
 	}
 	//writing
 	// Returns zero when trying to overwrite an opposite value
 	bool set (int i, bool val)
 	{
-		if (val != lut_d[i] && !lut_x[i]) return 0;
-		lut_d[i] = val;
-		lut_x[i] = 0;
+		int p = 1 << i;
+		if (bool(lut_d & p) != val)
+		{
+			if (!(lut_x & p)) return 0;
+			if (val) lut_d |= p;
+		}
+		if (lut_x & p) lut_x -= p; // lut_x &= !p;
 		return 1;
 	}
 	void unset (int i)
 	{
-		lut_d[i] = 0;
-		lut_x[i] = 1;
+		int p = 1 < i;
+		lut_d &= !p;
+		lut_x |= p;
 	}
 	void clear()
 	{
-		lut_x.assign(16, 1);
-		lut_d.assign(16, 0);
-		/*
-		int i;
-		for (i=15;i>=0;i--)
-		{
-			lut_x[i] = 1;
-			lut_d[i] = 0;
-		}
-		*/
+		lut_d = 0;
+		lut_x = max;
 	}
 
 	std::string str()
@@ -89,8 +83,8 @@ class lut {
 		std::string ret;
 		for (i=15;i>=0;i--)
 		{
-			if (lut_x[i]) ret += "x";
-			else ret += (lut_d[i] ? "1" : "0");
+			if ((lut_x >> i) & 1) ret += "x";
+			else ret += (((lut_d >> i ) & 1) ? "1" : "0");
 		}
 		return ret;
 	}
@@ -98,7 +92,7 @@ class lut {
 	// represented by a binary number 0000 - 1111.
 	bool eval(int d)
 	{
-		return lut_d[d];
+		return ((lut_d >> d) & 1);
 	}
 };
 
@@ -109,9 +103,9 @@ class comb {
 	// It can also return "k of n" bits from an integer.
 
 	private:
-		int c = 0;
-		int k = 0;
-		int n = 0;
+		char c = 0;
+		char k = 0;
+		char n = 0;
 
 	public:
 
@@ -161,18 +155,22 @@ class comb {
 		return (o == k);
 	}
 	// Composes a new int from selected bits of the in.
-	int map(int in)
+	inline int map(int in)
 	{
 		int ret = 0;
-		int i;
-		int k = 0;
-		for (i=0;i<n;i++)
+		char i = 0;
+		char k = 0;
+		int cc = c;
+		while (cc != 0) //i<n)
 		{
-			if ((c >> i) & 1) 
+			if (cc & 1) 
 			{
-				ret += ((in >> i) & 1) << i-k;
+				ret |= (in & 1) << i-k;
 			}
 			else k++;
+			cc = cc >> 1;
+			in = in >> 1;
+			i++;
 		}
 		return ret;
 	}
@@ -197,6 +195,10 @@ class comb {
 			if ((c >> i) & 1) ret.push_back(i);
 		}
 		return ret;
+	}
+	int intg()
+	{
+		return c;
 	}
 
 
@@ -313,10 +315,11 @@ class vari {
 
 // Return the state number in which emplacement failed.
 // Returns 0 if succeeded.
-int fill_luts (std::vector<lut> & luts, std::vector<int> & states, std::vector<comb> & configs)
+int fill_luts (std::vector<lut> & luts, std::vector<int> & states, std::vector<comb> & configs, int csmap[])
 {
 	int i, j;
 	int p2 = (p+1)/2;
+	int map;
 
 	for (i=0; i<b+x; i++) luts[i].clear();
 
@@ -324,14 +327,15 @@ int fill_luts (std::vector<lut> & luts, std::vector<int> & states, std::vector<c
 	{
 		for (i=0; i<b+x; i++)		// For each bit
 		{
-			if (luts[i].set(configs[i].map(states[j-1]), states[j] >> i & 1) == 0)
+			int ma = (configs[i].intg() << b+x);
+			if (luts[i].set(csmap[ma + states[j-1]], states[j] >> i & 1) == 0)
 				return j + (i << 16);
 			if ((j+p2) < states.size()) {
-				if (luts[i].set(configs[i].map(states[j-1+p2]), states[j+p2] >> i & 1) == 0)
+				if (luts[i].set(csmap[ma + states[j-1+p2]], states[j+p2] >> i & 1) == 0)
 					return j + (i << 16);
 			}
 			// Special case - machine state loop back
-			else if (luts[i].set(configs[i].map(states[p-1]), states[0] >> i & 1) == 0)
+			else if (luts[i].set(csmap[ma + states[p-1]], states[0] >> i & 1) == 0)
 				return j + (i << 16);
 		}
 	}
@@ -445,12 +449,25 @@ int main(int argc, char** argv)
 	int gws = 0;		// Greatest working state
 	int tb = 0;		// Troublesome bit
 	int ltb = 0;		// Last troublesome bit
+			
 
 	int i, j;
 	for (i=0; i<=sx; i++)
 	{
 		x = i;
-		//x = sx;
+		//
+		// Generating config-state map
+		int csmap[int(std::pow(2,2*(b+x)))];
+		comb gmc(4, b+x);
+		while (1)
+		{
+			for (j=0;j<std::pow(2,b+x);j++)
+			{
+				csmap[(gmc.intg() << b+x) + j] = gmc.map(j);
+			}
+			if (!gmc.next()) break;
+		}
+
 		std::vector<comb> configs(b+x, comb(4, b+x));
 		std::vector<lut> luts(b+x);
 
@@ -487,7 +504,7 @@ int main(int argc, char** argv)
 				gws = 0;
 
 
-				int fl = fill_luts(luts, states, configs);
+				int fl = fill_luts(luts, states, configs, csmap);
 				if (fl % (1 << 16) > gws) gws = fl % (1 << 16);
 
 				if (fl == 0)
